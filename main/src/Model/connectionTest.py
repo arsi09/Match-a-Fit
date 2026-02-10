@@ -1,6 +1,31 @@
-from Connection.connection import get_supabase_client
 import sys
 import os
+
+# Ensure the parent `src` directory is on sys.path so `from Connection...` works
+this_dir = os.path.dirname(os.path.abspath(__file__))
+src_root = os.path.abspath(os.path.join(this_dir, ".."))
+if src_root not in sys.path:
+	sys.path.insert(0, src_root)
+
+# Filter out leftover debug lines from any imported module
+_orig_stdout = sys.stdout
+class _FilterStdout:
+	def write(self, s):
+		try:
+			if isinstance(s, str) and (
+				s.startswith("DEBUG: response type:") or
+				s.startswith("DEBUG: hasattr data:") or
+				s.startswith("DEBUG: getattr error:")
+			):
+				return
+		except Exception:
+			pass
+		_orig_stdout.write(s)
+	def flush(self):
+		_orig_stdout.flush()
+sys.stdout = _FilterStdout()
+
+from Connection.connection import get_supabase_client
 
 from typing import List, Dict, Any, Optional
 

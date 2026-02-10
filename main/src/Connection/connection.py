@@ -1,3 +1,12 @@
+'''
+connection.py
+Python
+This module provides a shared Supabase client connection and a simple test function to verify connectivity.
+for Match-a-Fit app
+written by Juan Marco Saca Dada
+02/06/2025
+'''
+
 from supabase import create_client, Client
 import os
 import threading
@@ -17,7 +26,7 @@ DEFAULT_SUPABASE_URL = os.getenv(
 )
 DEFAULT_SUPABASE_KEY = os.getenv(
 	"SUPABASE_KEY",
-	"-- PUBLIC ANON KEY --",
+	"key here",
 )
 
 

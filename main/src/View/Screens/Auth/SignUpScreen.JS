@@ -1,200 +1,250 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { UserPlus, Eye, EyeOff } from 'lucide-react';
+import React, { useState } from 'react';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  ScrollView,
+  KeyboardAvoidingView, 
+  Platform,
+  Alert,
+  TouchableOpacity
+} from 'react-native';
+import { AuthController } from '../../../controllers/AuthController';
+import Button from '../../components/common/Button';
+import Input from '../../components/common/Input';
+import Loading from '../../components/common/Loading';
 
-export function SignUp() {
-  const navigate = useNavigate();
-  const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    password: '',
-    confirmPassword: '',
-    age: '',
-    gender: ''
-  });
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState('');
+const SignUpScreen = ({ navigation }) => {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [age, setAge] = useState('');
+  const [gender, setGender] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError('');
+  const handleSignUp = async () => {
+    setLoading(true);
+    
+    const result = await AuthController.signUp({
+      email,
+      password,
+      confirmPassword,
+      age,
+      gender,
+    });
+    
+    setLoading(false);
 
-    // Validation
-    if (!formData.username || !formData.email || !formData.password || !formData.age || !formData.gender) {
-      setError('All fields are required');
-      return;
+    if (result.success) {
+      Alert.alert(
+        'Success!', 
+        result.message,
+        [{ text: 'OK', onPress: () => console.log('Account created!') }]
+      );
+    } else {
+      Alert.alert('Sign Up Failed', result.error);
     }
-
-    if (formData.password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
-    // Check if user already exists
-    const users = JSON.parse(localStorage.getItem('matchafit_users') || '[]');
-    const userExists = users.find((u: any) => u.email === formData.email);
-
-    if (userExists) {
-      setError('Email already registered');
-      return;
-    }
-
-    // Hash password (simple base64 encoding for demo - in real app use proper hashing)
-    const hashedPassword = btoa(formData.password);
-
-    // Save user
-    const newUser = {
-      id: Date.now().toString(),
-      username: formData.username,
-      email: formData.email,
-      password: hashedPassword,
-      age: formData.age,
-      gender: formData.gender,
-      createdAt: new Date().toISOString()
-    };
-
-    users.push(newUser);
-    localStorage.setItem('matchafit_users', JSON.stringify(users));
-
-    // Auto login after signup
-    localStorage.setItem('matchafit_currentUser', JSON.stringify({
-      id: newUser.id,
-      username: newUser.username,
-      email: newUser.email
-    }));
-
-    navigate('/home');
   };
 
+  const selectGender = (selectedGender) => {
+    setGender(selectedGender);
+  };
+
+  if (loading) {
+    return <Loading message="Creating your account..." />;
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-200 via-blue-100 to-cyan-100 flex items-center justify-center p-4">
-      <div className="bg-white rounded-3xl shadow-2xl p-8 w-full max-w-md">
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-blue-400 to-cyan-400 rounded-full mb-4">
-            <UserPlus className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-3xl mb-2">Match-a-Fit</h1>
-          <p className="text-gray-600">Create your account</p>
-        </div>
-
-        {error && (
-          <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4">
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm mb-2 text-gray-700">Username</label>
-            <input
-              type="text"
-              value={formData.username}
-              onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
-              placeholder="Enter username"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm mb-2 text-gray-700">Email</label>
-            <input
-              type="email"
-              value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
-              placeholder="Enter email"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm mb-2 text-gray-700">Age</label>
-            <input
-              type="number"
-              value={formData.age}
-              onChange={(e) => setFormData({ ...formData, age: e.target.value })}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
-              placeholder="Enter age"
-              min="13"
-              max="120"
-            />
-          </div>
-
-          <div>
-            <label className="block text-sm mb-2 text-gray-700">Gender</label>
-            <select
-              value={formData.gender}
-              onChange={(e) => setFormData({ ...formData, gender: e.target.value })}
-              className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
-            >
-              <option value="">Select gender</option>
-              <option value="male">Male</option>
-              <option value="female">Female</option>
-              <option value="non-binary">Non-binary</option>
-              <option value="prefer-not-to-say">Prefer not to say</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm mb-2 text-gray-700">Password</label>
-            <div className="relative">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                placeholder="Enter password"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+    <KeyboardAvoidingView 
+      style={styles.container}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+    >
+      <ScrollView 
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={styles.content}>
+          <Text style={styles.title}>Create Account</Text>
+          <Text style={styles.subtitle}>Sign up for Match-a-Fit</Text>
+          
+          <Input
+            label="Email"
+            placeholder="Enter your email"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoCapitalize="none"
+          />
+          
+          <Input
+            label="Password"
+            placeholder="Enter password"
+            value={password}
+            onChangeText={setPassword}
+            secureTextEntry
+          />
+          
+          <Input
+            label="Confirm Password"
+            placeholder="Re-enter password"
+            value={confirmPassword}
+            onChangeText={setConfirmPassword}
+            secureTextEntry
+          />
+          
+          <Input
+            label="Age"
+            placeholder="Enter your age"
+            value={age}
+            onChangeText={setAge}
+            keyboardType="numeric"
+          />
+          
+          <View style={styles.genderContainer}>
+            <Text style={styles.label}>Gender</Text>
+            <View style={styles.genderButtons}>
+              <TouchableOpacity
+                style={[
+                  styles.genderButton,
+                  gender === 'male' && styles.genderButtonSelected
+                ]}
+                onPress={() => selectGender('male')}
               >
-                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm mb-2 text-gray-700">Confirm Password</label>
-            <div className="relative">
-              <input
-                type={showConfirmPassword ? 'text' : 'password'}
-                value={formData.confirmPassword}
-                onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                className="w-full px-4 py-3 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-400"
-                placeholder="Confirm password"
-              />
-              <button
-                type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                <Text style={[
+                  styles.genderButtonText,
+                  gender === 'male' && styles.genderButtonTextSelected
+                ]}>
+                  Male
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[
+                  styles.genderButton,
+                  gender === 'female' && styles.genderButtonSelected
+                ]}
+                onPress={() => selectGender('female')}
               >
-                {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-              </button>
-            </div>
-          </div>
-
-          <button
-            type="submit"
-            className="w-full bg-gradient-to-r from-blue-400 to-cyan-400 text-white py-3 rounded-lg hover:from-blue-500 hover:to-cyan-500 transition-all shadow-lg"
+                <Text style={[
+                  styles.genderButtonText,
+                  gender === 'female' && styles.genderButtonTextSelected
+                ]}>
+                  Female
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[
+                  styles.genderButton,
+                  gender === 'other' && styles.genderButtonSelected
+                ]}
+                onPress={() => selectGender('other')}
+              >
+                <Text style={[
+                  styles.genderButtonText,
+                  gender === 'other' && styles.genderButtonTextSelected
+                ]}>
+                  Other
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          
+          <Button 
+            title="Sign Up" 
+            onPress={handleSignUp}
+            style={styles.signUpButton}
+          />
+          
+          <TouchableOpacity 
+            onPress={() => console.log('Go to login')}
+            style={styles.loginLink}
           >
-            Create Account
-          </button>
-        </form>
-
-        <p className="text-center mt-6 text-gray-600">
-          Already have an account?{' '}
-          <Link to="/login" className="text-blue-500 hover:underline">
-            Login
-          </Link>
-        </p>
-      </div>
-    </div>
+            <Text style={styles.loginText}>
+              Already have an account? <Text style={styles.loginTextBold}>Log In</Text>
+            </Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
-}
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f8f9fa',
+  },
+  scrollContent: {
+    flexGrow: 1,
+  },
+  content: {
+    flex: 1,
+    padding: 20,
+    paddingTop: 60,
+  },
+  title: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    color: '#333',
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 30,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+    color: '#333',
+  },
+  genderContainer: {
+    marginVertical: 8,
+  },
+  genderButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  genderButton: {
+    flex: 1,
+    padding: 14,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    marginHorizontal: 4,
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+  genderButtonSelected: {
+    backgroundColor: '#007AFF',
+    borderColor: '#007AFF',
+  },
+  genderButtonText: {
+    fontSize: 14,
+    color: '#333',
+    fontWeight: '500',
+  },
+  genderButtonTextSelected: {
+    color: '#fff',
+    fontWeight: '600',
+  },
+  signUpButton: {
+    marginTop: 20,
+  },
+  loginLink: {
+    alignItems: 'center',
+    marginTop: 20,
+  },
+  loginText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  loginTextBold: {
+    color: '#007AFF',
+    fontWeight: '600',
+  },
+});
+
+export default SignUpScreen;

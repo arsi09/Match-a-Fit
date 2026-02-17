@@ -47,23 +47,13 @@ def sign_up(email: str, password: str, age: Optional[int] = None, gender: Option
     if not valid:
         return {"success": False, "error": "; ".join(errors)}
 
-    supabase = get_supabase_client()
-
-    # check for existing email
+    # check for existing email using the model layer
     try:
-        existing = supabase.table("users").select("id").eq("email", model.email).limit(1).execute()
-        if getattr(existing, "data", None):
+        if LogInModel.find_by_email(model.email):
             return {"success": False, "error": "Email already registered"}
     except Exception as e:
         return {"success": False, "error": f"Database query failed: {e}"}
 
-    record = model.to_db_record()
-
-    try:
-        inserted = supabase.table("users").insert(record).execute()
-        if getattr(inserted, "error", None):
-            return {"success": False, "error": str(inserted.error)}
-
-        return {"success": True, "message": "Account created", "data": inserted.data}
-    except Exception as e:
-        return {"success": False, "error": f"Insert failed: {e}"}
+    # persist via the model
+    result = model.save()
+    return result

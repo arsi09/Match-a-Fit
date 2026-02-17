@@ -9,7 +9,8 @@ import {
   Alert,
   TouchableOpacity
 } from 'react-native';
-import { AuthController } from '../../../controllers/AuthController';
+import AuthService from '../../Services/AuthService';
+import SignUpModel from '../../../Model/SignUpModel.py';
 import Button from '../../components/common/Button';
 import Input from '../../components/common/Input';
 import Loading from '../../components/common/Loading';
@@ -23,26 +24,28 @@ const SignUpScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
 
   const handleSignUp = async () => {
-    setLoading(true);
-    
-    const result = await AuthController.signUp({
-      email,
-      password,
-      confirmPassword,
-      age,
-      gender,
-    });
-    
-    setLoading(false);
+    // validate on the client using SignUpModel
+    const model = SignUpModel.fromForm({ email, password, confirmPassword, age, gender });
+    const { valid, errors } = model.validate();
 
-    if (result.success) {
-      Alert.alert(
-        'Success!', 
-        result.message,
-        [{ text: 'OK', onPress: () => console.log('Account created!') }]
-      );
-    } else {
-      Alert.alert('Sign Up Failed', result.error);
+    if (!valid) {
+      Alert.alert('Invalid input', errors.join('\n'));
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const result = await AuthService.signUp(model.toPayload());
+      setLoading(false);
+
+      if (result && result.success) {
+        Alert.alert('Success!', result.message, [{ text: 'OK', onPress: () => console.log('Account created!') }]);
+      } else {
+        Alert.alert('Sign Up Failed', (result && result.error) || 'Unknown error');
+      }
+    } catch (err) {
+      setLoading(false);
+      Alert.alert('Sign Up Failed', err.message || 'Unexpected error');
     }
   };
 

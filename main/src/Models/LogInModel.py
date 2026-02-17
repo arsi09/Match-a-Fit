@@ -1,7 +1,7 @@
 import hashlib
 
 class LogInModel:
-    def __init__(self, id, first_name, last_name, email, password_hash, sal):
+    def __init__(self, id, first_name, last_name, email, password_hash, salt):
         self.id = id
         self.first_name = first_name
         self.last_name = last_name
@@ -11,7 +11,7 @@ class LogInModel:
 
     def verify_password(self, password):
         
-        hashed = haslib.sha256((password + self.salt).encode("utf-8")).hexdigest()
+        hashed = hashlib.sha256((password + self.salt).encode("utf-8")).hexdigest()
 
         return hashed == self.password_hash
     

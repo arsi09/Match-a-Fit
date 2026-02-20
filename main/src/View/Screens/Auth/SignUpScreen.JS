@@ -9,11 +9,10 @@ import {
   Alert,
   TouchableOpacity
 } from 'react-native';
-import AuthService from '../../Services/AuthService';
-import SignUpModel from '../../../Model/SignUpModel.py';
-import Button from '../../components/common/Button';
-import Input from '../../components/common/Input';
-import Loading from '../../components/common/Loading';
+import { AuthController } from '../../../Controllers/Authcontroller.JS';
+import Button from '../Components/Common/Button';
+import Input from '../Components/Common/Input';
+import Loading from '../Components/Common/Loading';
 
 const SignUpScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');
@@ -24,28 +23,26 @@ const SignUpScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(false);
 
   const handleSignUp = async () => {
-    // validate on the client using SignUpModel
-    const model = SignUpModel.fromForm({ email, password, confirmPassword, age, gender });
-    const { valid, errors } = model.validate();
-
-    if (!valid) {
-      Alert.alert('Invalid input', errors.join('\n'));
-      return;
-    }
-
     setLoading(true);
-    try {
-      const result = await AuthService.signUp(model.toPayload());
-      setLoading(false);
+    
+    const result = await AuthController.signUp({
+      email,
+      password,
+      confirmPassword,
+      age,
+      gender,
+    });
+    
+    setLoading(false);
 
-      if (result && result.success) {
-        Alert.alert('Success!', result.message, [{ text: 'OK', onPress: () => console.log('Account created!') }]);
-      } else {
-        Alert.alert('Sign Up Failed', (result && result.error) || 'Unknown error');
-      }
-    } catch (err) {
-      setLoading(false);
-      Alert.alert('Sign Up Failed', err.message || 'Unexpected error');
+    if (result.success) {
+      Alert.alert(
+        'Success!', 
+        result.message,
+        [{ text: 'OK', onPress: () => console.log('Account created!') }]
+      );
+    } else {
+      Alert.alert('Sign Up Failed', result.error);
     }
   };
 

@@ -1,42 +1,70 @@
-/**
- * Controllers/AuthController.JS
- * Frontend controller responsible for auth-related API calls.
- * - signUp(payload): POST /auth/signup
- * Returns a normalized object: { success: boolean, message?: string, data?: any, error?: string }
- *
- * NOTE: move `API_BASE` to a shared config (`View/Services/Config/apiConfig.js`) when available.
- */
+import { User } from '../models/User';
+import { authService } from '../services/authService';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
-const API_BASE = 'https://vditmcedjuuphmalidpw.supabase.com'; // change to your backend URL or use apiConfig
+export class AuthController {
+  static async signUp(userData) {
+    try {
+      if (!User.validateEmail(userData.email)) {
+        throw new Error('Invalid email format');
+      }
+      if (!User.validatePassword(userData.password)) {
+        throw new Error('Password must be at least 8 characters with uppercase, lowercase, and number');
+      }
+      if (!User.validateAge(userData.age)) {
+        throw new Error('Age must be between 13 and 120');
+      }
+      if (userData.password !== userData.confirmPassword) {
+        throw new Error('Passwords do not match');
+      }
 
-async function signUp(payload) {
-  if (!payload || !payload.email || !payload.password) {
-    return { success: false, error: 'Email and password are required' };
+      const user = new User(userData);
+      const response = await authService.register(user.toJSON(), userData.password);
+
+      await AsyncStorage.setItem('authToken', response.token);
+      await AsyncStorage.setItem('userId', response.user.id.toString());
+
+      return {
+        success: true,
+        user: new User(response.user),
+        message: 'Account created successfully',
+      };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
   }
 
-  try {
-    const res = await fetch(`${API_BASE}/auth/signup`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    let body = {};
+  static async login(email, password) {
     try {
-      body = await res.json();
-    } catch (e) {
-      // ignore JSON parse errors
-    }
+      if (!User.validateEmail(email)) {
+        throw new Error('Invalid email format');
+      }
+      if (!password) {
+        throw new Error('Password is required');
+      }
 
-    if (!res.ok) {
-      const errorMsg = body && body.message ? body.message : (body && body.error ? body.error : `Request failed with status ${res.status}`);
-      return { success: false, error: errorMsg };
-    }
+      const response = await authService.login(email, password);
 
-    return { success: true, message: body?.message || 'Account created', data: body };
-  } catch (err) {
-    return { success: false, error: err.message || 'Network error' };
+      await AsyncStorage.setItem('authToken', response.token);
+      await AsyncStorage.setItem('userId', response.user.id.toString());
+
+      return {
+        success: true,
+        user: new User(response.user),
+        message: 'Login successful',
+      };
+    } catch (error) {
+      return { success: false, error: error.message || 'Invalid credentials' };
+    }
+  }
+
+  static async logout() {
+    try {
+      await AsyncStorage.removeItem('authToken');
+      await AsyncStorage.removeItem('userId');
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: 'Failed to logout' };
+    }
   }
 }
-
-module.exports = { signUp };

@@ -9,10 +9,10 @@ import {
   Alert,
   TouchableOpacity
 } from 'react-native';
-import { AuthController } from '../../../controllers/AuthController';
-import Button from '../../components/common/Button';
-import Input from '../../components/common/Input';
-import Loading from '../../components/common/Loading';
+import { AuthController } from '../../../Controllers/Authcontroller.JS';
+import Button from '../Components/Common/Button';
+import Input from '../Components/Common/Input';
+import Loading from '../Components/Common/Loading';
 
 const SignUpScreen = ({ navigation }) => {
   const [email, setEmail] = useState('');

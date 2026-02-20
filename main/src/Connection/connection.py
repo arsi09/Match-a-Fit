@@ -26,7 +26,7 @@ DEFAULT_SUPABASE_URL = os.getenv(
 )
 DEFAULT_SUPABASE_KEY = os.getenv(
 	"SUPABASE_KEY",
-	"key here",
+	"sb_publishable_lu1DZ3v-baU8XzzQgVEGtA_xJHM8eAG",
 )
 
 

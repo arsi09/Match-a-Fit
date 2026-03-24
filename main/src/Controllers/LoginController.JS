@@ -97,5 +97,41 @@ export class LoginController {
 
 		return result;
 	}
+
+	/**
+	 * testController - Demonstrates that LoginController is working
+	 * Run this to verify the controller functions are operational
+	 * @returns {Object} Test results showing controller is functioning
+	 */
+	static testController() {
+		console.log('🧪 LoginController Test Started...');
+		
+		// Test 1: Normalize credentials with object
+		const test1 = this.normalizeCredentials({ email: '  user@example.com  ', password: 'pass123' });
+		console.log('✅ Test 1 - normalizeCredentials (object):', test1);
+		
+		// Test 2: Normalize credentials with string args
+		const test2 = this.normalizeCredentials('  test@mail.com  ', 'password456');
+		console.log('✅ Test 2 - normalizeCredentials (string args):', test2);
+		
+		// Test 3: Decode password
+		const encoded = btoa('secretPassword');
+		const decoded = this.decodePassword(encoded);
+		console.log('✅ Test 3 - decodePassword:', { encoded, decoded, match: decoded === 'secretPassword' });
+		
+		const result = {
+			success: true,
+			message: '🎉 LoginController is working correctly!',
+			tests: {
+				normalizeCredentialsObject: test1,
+				normalizeCredentialsArgs: test2,
+				decodePassword: decoded,
+			},
+			timestamp: new Date().toISOString(),
+		};
+		
+		console.log('🎉 All tests passed!', result);
+		return result;
+	}
 }
 

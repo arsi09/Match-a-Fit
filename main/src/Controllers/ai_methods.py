@@ -10,10 +10,6 @@ genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 class AIMethods:
     def __init__(self, model_name="gemini-3-flash"):
-        """
-        Initializes the model. Flash is recommended for 
-        fast, low-cost multimodal tasks.
-        """
         self.model = genai.GenerativeModel(model_name)
 
     async def generate_text_response(self, prompt: str):
@@ -25,7 +21,7 @@ class AIMethods:
 
     async def analyze_outfit(self, image_paths: list[str], occasion: str):
         """
-        NEW: Handles multiple images at once to suggest a full outfit.
+        Handles multiple images at once to suggest a full outfit.
         """
         try:
             # Load all provided images

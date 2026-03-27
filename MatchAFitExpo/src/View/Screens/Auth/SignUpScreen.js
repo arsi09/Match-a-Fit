@@ -42,12 +42,18 @@ const SignUpScreen = ({ navigation }) => {
     setLoading(false);
 
     if (result.success) {
-      Alert.alert(
-        'Success!', 
-        result.message,
-        [{ text: 'OK', onPress: () => console.log('Account created!') }]
-      );
-    } else {
+  Alert.alert(
+    'Success!', 
+    result.message,
+    [{ 
+      text: 'OK', 
+      onPress: () => {
+        // Reload the app to trigger auth check and show Home screen
+        window.location.reload();
+      }
+    }]
+  );
+} else {
       Alert.alert('Sign Up Failed', result.error);
     }
   };

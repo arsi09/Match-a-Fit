@@ -15,7 +15,10 @@ import Input from '../Components/Common/Input';
 import Loading from '../Components/Common/Loading';
 
 const SignUpScreen = ({ navigation }) => {
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [age, setAge] = useState('');
@@ -26,7 +29,10 @@ const SignUpScreen = ({ navigation }) => {
     setLoading(true);
     
     const result = await AuthController.signUp({
+      firstName,
+      lastName,
       email,
+      phoneNumber,
       password,
       confirmPassword,
       age,
@@ -36,12 +42,18 @@ const SignUpScreen = ({ navigation }) => {
     setLoading(false);
 
     if (result.success) {
-      Alert.alert(
-        'Success!', 
-        result.message,
-        [{ text: 'OK', onPress: () => console.log('Account created!') }]
-      );
-    } else {
+  Alert.alert(
+    'Success!', 
+    result.message,
+    [{ 
+      text: 'OK', 
+      onPress: () => {
+        // Reload the app to trigger auth check and show Home screen
+        window.location.reload();
+      }
+    }]
+  );
+} else {
       Alert.alert('Sign Up Failed', result.error);
     }
   };
@@ -68,12 +80,36 @@ const SignUpScreen = ({ navigation }) => {
           <Text style={styles.subtitle}>Sign up for Match-a-Fit</Text>
           
           <Input
+            label="First Name"
+            placeholder="Enter your first name"
+            value={firstName}
+            onChangeText={setFirstName}
+            autoCapitalize="words"
+          />
+
+          <Input
+            label="Last Name"
+            placeholder="Enter your last name"
+            value={lastName}
+            onChangeText={setLastName}
+            autoCapitalize="words"
+          />
+          
+          <Input
             label="Email"
             placeholder="Enter your email"
             value={email}
             onChangeText={setEmail}
             keyboardType="email-address"
             autoCapitalize="none"
+          />
+
+          <Input
+            label="Phone Number"
+            placeholder="Enter your phone number"
+            value={phoneNumber}
+            onChangeText={setPhoneNumber}
+            keyboardType="phone-pad"
           />
           
           <Input

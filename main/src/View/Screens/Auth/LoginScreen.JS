@@ -10,7 +10,7 @@ import {
   Alert,
   TouchableOpacity
 } from 'react-native';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import LoginController from '../../../Controllers/LoginController';
 
 const LoginScreen = ( { navigation }) => {
     const [email, setEmail] = useState ('');
@@ -21,43 +21,12 @@ const LoginScreen = ( { navigation }) => {
     const handleLogin = async () => {
         setError('');
 
-        if (!email || !password)
-        {
-            setError('Email and password are required');
-            return;
+        try {
+            await LoginController.login(email, password);
+            navigation.navigate('Home');
+        } catch (err) {
+            setError(err.message);
         }
-
-    //Searches for past users by email using AsyncStorage
-    try {
-        const usersRaw = await AsyncStorage.getItem('matchafit_users');
-        const users = usersRaw ? JSON.parse(usersRaw) : [];
-
-        const user = users.find((u) => u.email === email);
-
-        if (!user)
-        {
-            setError('Email is incorrect. Please try again.');
-            return;
-        }
-
-        const decodedPassword = atob(user.password);
-        if(decodedPassword !== password)
-        {
-            setError('Password is incorrect. Please try again.');
-            return;
-        }
-
-        await AsyncStorage.setItem('matchafit_currentUser', JSON.stringify({
-            id: user.id,
-            username: user.username,
-            email: user.email
-        })
-    );
-
-    navigation.navigate('Home');
-    } catch (err) {
-        Alert.alert('Error', 'Something went wrong. Please try again.');
-    }
     };
 
     return (

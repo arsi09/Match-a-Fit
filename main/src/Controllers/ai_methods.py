@@ -1,3 +1,8 @@
+"""
+ai_methods.py
+made by: Pedro Jacobo
+This file contains all the ai methods needed for the ai model.
+"""
 import google.generativeai as genai
 import PIL.Image
 import os
@@ -9,7 +14,7 @@ load_dotenv()
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
 class AIMethods:
-    def __init__(self, model_name="gemini-3-flash"):
+    def __init__(self, model_name="gemini-1.5-flash"):
         self.model = genai.GenerativeModel(model_name)
 
     async def generate_text_response(self, prompt: str):

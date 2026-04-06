@@ -100,29 +100,22 @@ const PhotoUploadScreen = ({navigation}) => {
         setStep('instructions');
     };
 
-    //Called when users save item to closet - validates selections, then calls controller to save item and navigates back to home on success
+    //Called when users save item to closet, turns over all logic to controller which handles token retrieval and API calls - shows loading indicator while saving and alerts on success or error
     const handleSave = async () => {
-        if (!category || !occasion) {
-            Alert.alert('Missing Information', 'Please select both category and occasion.');
-            return;
-        }
-
-    setSaving(true); // Show loading indicator while saving
-
-    try {//Controller handles all token retrival 
-        await PhotoUploadController.saveClothingItem({photoUri, category, occasion});
-
-        // Show success alert and navigate back to home
+    setSaving(true);
+    try {
+        await PhotoUploadController.saveClothingItem({ photoUri, category, occasion });
         Alert.alert('Success', 'Clothing item saved successfully to your closet!', [
-            {text: 'OK', onPress: () => navigation.navigate('Home')},
+            { text: 'OK', onPress: () => navigation.navigate('Home') },
         ]);
-    } catch (err) { //Controller throws error if token is invalid or expired, or if there are issues with saving item - show alert with error message
+    } catch (err) {
         Alert.alert('Error', err.message || 'An error occurred while saving. Please try again.');
     } finally {
-        setSaving(false); // Hide loading indicator after saving attempt
+        setSaving(false);
     }
 };
 
+//Return the three main steps of the photo upload flow - instructions with photo options, confirm photo preview, and select details with save button - all wrapped in a scroll view with keyboard handling and a back button to return to home screen
 return (
     <KeyboardAvoidingView
         style={styles.container}

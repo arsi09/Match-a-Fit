@@ -1,95 +1,244 @@
-'''
+"""
 connection.py
-Python
-This module provides a shared Supabase client connection and a simple test function to verify connectivity.
-for Match-a-Fit app
-written by Juan Marco Saca Dada
-02/06/2025
-'''
+made by: Arsi 
+This module provides:
+- A shared (singleton) Supabase client connection
+- Thread-safe initialization
+- Environment variable loading (.env support)
+- A test function to verify database connectivity
 
+Project: Match-a-Fit
+"""
+
+# Enables forward type hints (optional but clean)
+from __future__ import annotations
+
+# Standard library imports
+import os                     # Used for reading environment variables
+import threading              # Used to make client initialization thread-safe
+from typing import Tuple, Any, Optional  # Type hints
+
+# Supabase Python SDK
 from supabase import create_client, Client
-import os
-import threading
-from typing import Tuple, Any, Optional
+
+
+# ------------------------------------------------------------
+# Load Environment Variables (.env support)
+# ------------------------------------------------------------
+# If python-dotenv is installed, this will load variables
+# from a ".env" file into the environment automatically.
+# If dotenv is not installed, the code will continue silently.
 try:
-	# optional: load .env into environment if present
-	from dotenv import load_dotenv
-	load_dotenv()
+    from dotenv import load_dotenv
+    load_dotenv()
 except Exception:
-	pass
+    pass
 
 
-# Default to environment variables but fall back to the provided values
-DEFAULT_SUPABASE_URL = os.getenv(
-	"SUPABASE_URL",
-	"https://vditmcedjuuphmalidpw.supabase.co",
-)
-DEFAULT_SUPABASE_KEY = os.getenv(
-	"SUPABASE_KEY",
-	"key here",
-)
+# ------------------------------------------------------------
+# Configuration Variables
+# ------------------------------------------------------------
+# These read from environment variables.
+# If not found, they default to empty string "".
+# You SHOULD define them in your .env file like:
+#
+# SUPABASE_URL=https://yourproject.supabase.co
+# SUPABASE_KEY=your_anon_or_service_role_key
+#
+DEFAULT_SUPABASE_URL = os.getenv("SUPABASE_URL", "https://vditmcedjuuphmalidpw.supabase.co").strip()
+DEFAULT_SUPABASE_KEY = os.getenv("SUPABASE_KEY", "sb_publishable_lu1DZ3v-baU8XzzQgVEGtA_xJHM8eAG").strip()
 
 
+# ------------------------------------------------------------
+# Validation Function
+# ------------------------------------------------------------
+def _validate_config(url: str, key: str) -> None:
+    """
+    Validates that Supabase URL and key exist and look correct.
+
+    Raises ValueError if configuration is invalid.
+    """
+
+    # Check if URL is missing
+    if not url:
+        raise ValueError(
+            "SUPABASE_URL is empty.\n"
+            "Add it to your .env file or environment variables.\n"
+            "Example:\n"
+            "SUPABASE_URL=https://<project-ref>.supabase.co"
+        )
+
+    # Check if key is missing
+    if not key:
+        raise ValueError(
+            "SUPABASE_KEY is empty.\n"
+            "Add it to your .env file or environment variables."
+        )
+
+    # Basic sanity check for URL format
+    if not url.startswith("https://") or ".supabase.co" not in url:
+        raise ValueError(
+            f"SUPABASE_URL looks incorrect: {url}\n"
+            "Expected format: https://<project-ref>.supabase.co"
+        )
+
+
+# ------------------------------------------------------------
+# Singleton Client Setup (Thread-Safe)
+# ------------------------------------------------------------
+
+# This variable will hold the cached Supabase client.
+# It starts as None and gets created only once.
 _supabase_client: Optional[Client] = None
+
+# This lock prevents race conditions in multi-threaded apps.
 _supabase_lock = threading.Lock()
 
 
 def get_supabase_client(url: Optional[str] = None, key: Optional[str] = None) -> Client:
-		"""Return a shared Supabase `Client`.
+    """
+    Returns a Supabase Client instance.
 
-		- If `url` or `key` are provided, a new client for those values is returned
-			(useful for testing or temporary connections).
-		- Otherwise a module-level cached client is created once and reused
-			(thread-safe).
-		"""
-		global _supabase_client
-		# Explicit override: create a one-off client
-		if url or key:
-				use_url = url or DEFAULT_SUPABASE_URL
-				use_key = key or DEFAULT_SUPABASE_KEY
-				return create_client(use_url, use_key)
+    Behavior:
+    - If url or key are passed → create a temporary client (no caching).
+    - Otherwise → create a single shared client (cached) and reuse it.
 
-		# Return cached client (create if necessary)
-		if _supabase_client is None:
-				with _supabase_lock:
-						if _supabase_client is None:
-								_supabase_client = create_client(DEFAULT_SUPABASE_URL, DEFAULT_SUPABASE_KEY)
-		return _supabase_client
+    This makes it efficient and thread-safe.
+    """
+    global _supabase_client
+
+    # --------------------------------------------------------
+    # Case 1: Temporary / Override Client
+    # --------------------------------------------------------
+    # If caller provides custom url or key,
+    # create a one-time client and return it.
+    if url is not None or key is not None:
+        use_url = (url or DEFAULT_SUPABASE_URL).strip()
+        use_key = (key or DEFAULT_SUPABASE_KEY).strip()
+
+        # Validate before creating client
+        _validate_config(use_url, use_key)
+
+        return create_client(use_url, use_key)
+
+    # --------------------------------------------------------
+    # Case 2: Cached Singleton Client
+    # --------------------------------------------------------
+    # If client hasn't been created yet, create it safely.
+    if _supabase_client is None:
+
+        # Lock prevents two threads from creating client simultaneously
+        with _supabase_lock:
+
+            # Double-check pattern (important for thread safety)
+            if _supabase_client is None:
+
+                # Validate configuration
+                _validate_config(DEFAULT_SUPABASE_URL, DEFAULT_SUPABASE_KEY)
+
+                # Create and cache client
+                _supabase_client = create_client(
+                    DEFAULT_SUPABASE_URL,
+                    DEFAULT_SUPABASE_KEY
+                )
+
+    # Return cached client
+    return _supabase_client
 
 
-def test_connection(client: Optional[Client] = None) -> Tuple[bool, Any]:
-	"""Run a lightweight test against the Supabase REST API.
+# ------------------------------------------------------------
+# Connection Test Function
+# ------------------------------------------------------------
+def test_connection(
+    client: Optional[Client] = None,
+    tables: Optional[list[str]] = None,
+) -> Tuple[bool, Any]:
+    """
+    Tests connectivity to Supabase by querying a table.
 
-	This queries a small slice of a likely table (`profiles`) and returns a tuple
-	(success: bool, response_or_error).
-	If the table doesn't exist the request may still succeed but return an error
-	object — this function treats any transport/exception as a failure.
-	"""
-	client = client or get_supabase_client()
-	candidate_tables = ["profiles", "outfits", "users"]
-	last_error = None
-	for table in candidate_tables:
-		try:
-			res = client.table(table).select("*").limit(1).execute()
-			if getattr(res, "error", None):
-				last_error = res.error
-				# If table wasn't found, try the next candidate
-				continue
-			return True, {"table": table, "data": res.data}
-		except Exception as e:
-			last_error = str(e)
-			continue
-	return False, last_error or "No candidate tables found or unknown error"
+    Returns:
+        (True, data) if successful
+        (False, error_info) if failed
+
+    Important Notes:
+    - If Row Level Security (RLS) is enabled,
+      you may get permission errors.
+    - If the table does not exist,
+      you will get a "relation does not exist" error.
+    """
+
+    # Use provided client or create/get cached one
+    client = client or get_supabase_client()
+
+    # Choose which table(s) to test
+    # Default is "clothing_items" unless overridden via environment variable
+    default_table = os.getenv("SUPABASE_TEST_TABLE", "clothing_items").strip()
+    candidate_tables = tables or [default_table]
+
+    last_error: Any = None
+
+    # Try each candidate table
+    for table in candidate_tables:
+        try:
+            # Perform lightweight query
+            res = client.table(table).select("*").limit(1).execute()
+
+            # Check for Supabase-level error
+            err = getattr(res, "error", None)
+
+            if err:
+                # Save error but continue trying other tables
+                last_error = {"table": table, "error": err}
+                continue
+
+            # Success
+            return True, {
+                "table": table,
+                "data": getattr(res, "data", None)
+            }
+
+        except Exception as e:
+            # Catch transport/network or SDK exceptions
+            last_error = {"table": table, "exception": str(e)}
+            continue
+
+    # If all tables fail, return last error encountered
+    return False, last_error or "Unknown error"
 
 
+# ------------------------------------------------------------
+# CLI Debug Mode
+# ------------------------------------------------------------
+# If you run this file directly:
+# python connection.py
+#
+# It will attempt to connect and print debug info.
 if __name__ == "__main__":
-	# Quick CLI test when run directly
-	cli_client = get_supabase_client()
-	ok, info = test_connection(cli_client)
-	if ok:
-		print("Supabase connection: OK")
-		print(info)
-	else:
-		print("Supabase connection: FAILED")
-		print(info)
 
+    # Show current working directory
+    print("Current Working Directory:", os.getcwd())
+
+    # Show whether environment variables loaded (without exposing secrets)
+    print("SUPABASE_URL set:", bool(DEFAULT_SUPABASE_URL))
+    print("SUPABASE_KEY set:", bool(DEFAULT_SUPABASE_KEY))
+
+    if DEFAULT_SUPABASE_URL:
+        print("SUPABASE_URL:", DEFAULT_SUPABASE_URL)
+
+    try:
+        # Attempt to create client
+        cli_client = get_supabase_client()
+
+        # Run test
+        ok, info = test_connection(cli_client)
+
+        if ok:
+            print("\nSupabase connection: OK")
+            print(info)
+        else:
+            print("\nSupabase connection: FAILED")
+            print(info)
+
+    except Exception as e:
+        print("\nSupabase connection: FAILED (configuration error)")
+        print(str(e))

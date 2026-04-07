@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 
+
 const GenerateOutfitScreen = ({ navigation = null }) => {
   const [step, setStep] = useState('selection'); // 'selection' | 'generating' | 'result'
   const [occasion, setOccasion] = useState('');

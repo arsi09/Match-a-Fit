@@ -127,7 +127,7 @@ return (
         >
             {/*Back button to return to home screen*/}
             <TouchableOpacity style={styles.backButton} onPress={() => navigation.navigate('Home')}>
-                <Text style={styles.backButtonText}>Back</Text>
+                <Text style={styles.backButtonText}>← Back</Text>
             </TouchableOpacity>
 
             <View style={styles.card}>
@@ -257,7 +257,7 @@ const styles = StyleSheet.create({
     },
 
     backButtonText: {
-        color: '#4db8d4',
+        color: '#000000',
         fontSize: 16,
         fontWeight: '600',
     },

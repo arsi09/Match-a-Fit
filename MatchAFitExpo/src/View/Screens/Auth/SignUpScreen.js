@@ -1,20 +1,26 @@
 import React, { useState } from 'react';
-import { 
-  View, 
-  Text, 
-  StyleSheet, 
+import {
+  View,
+  Text,
+  StyleSheet,
   ScrollView,
-  KeyboardAvoidingView, 
+  KeyboardAvoidingView,
   Platform,
   Alert,
-  TouchableOpacity
+  TouchableOpacity,
 } from 'react-native';
-import { AuthController } from '../../../Controllers/SignUpController2.JS';
+import { router } from 'expo-router';
+import { SignUpController } from '../../../Controllers/SignUpController';
 import Button from '../Components/Common/Button';
 import Input from '../Components/Common/Input';
 import Loading from '../Components/Common/Loading';
 
-const SignUpScreen = ({ navigation }) => {
+/*
+  This is the screen component the user sees.
+  It collects input and sends it to the controller.
+*/
+const SignUpScreen = () => {
+  // useState creates variables that React watches for changes
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -22,51 +28,79 @@ const SignUpScreen = ({ navigation }) => {
   const [gender, setGender] = useState('');
   const [loading, setLoading] = useState(false);
 
+  /*
+    This function runs when the user presses the Sign Up button.
+    It calls the controller and then shows success or error messages.
+  */
   const handleSignUp = async () => {
+    // Show loading spinner
     setLoading(true);
-    
-    const result = await AuthController.signUp({
+
+    // Send current form values to the controller
+    const result = await SignUpController.signUp({
       email,
       password,
       confirmPassword,
       age,
       gender,
     });
-    
+
+    // Stop loading spinner
     setLoading(false);
 
     if (result.success) {
       Alert.alert(
-        'Success!', 
-        result.message,
-        [{ text: 'OK', onPress: () => console.log('Account created!') }]
+        'Success!',
+        result.message || 'Account created successfully!',
+        [
+          {
+            text: 'OK',
+            // Go back to login screen after successful sign up
+            onPress: () => router.push('/'),
+          },
+        ]
       );
     } else {
-      Alert.alert('Sign Up Failed', result.error);
+      /*
+        Object.values(result.errors || {}) gets all error messages
+        from the errors object and turns them into an array.
+
+        join('\n') puts each error on a new line.
+      */
+      Alert.alert(
+        'Sign Up Failed',
+        Object.values(result.errors || {}).join('\n') || 'Something went wrong.'
+      );
     }
   };
 
+  // Updates selected gender when user presses a gender button
   const selectGender = (selectedGender) => {
     setGender(selectedGender);
   };
 
+  /*
+    If loading is true, show the Loading component instead of the form.
+    This prevents user from pressing buttons while request is being processed.
+  */
   if (loading) {
     return <Loading message="Creating your account..." />;
   }
 
   return (
-    <KeyboardAvoidingView 
+    <KeyboardAvoidingView
       style={styles.container}
+      // On iPhone, push content up when keyboard appears
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
-      <ScrollView 
+      <ScrollView
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.content}>
           <Text style={styles.title}>Create Account</Text>
           <Text style={styles.subtitle}>Sign up for Match-a-Fit</Text>
-          
+
           <Input
             label="Email"
             placeholder="Enter your email"
@@ -75,7 +109,7 @@ const SignUpScreen = ({ navigation }) => {
             keyboardType="email-address"
             autoCapitalize="none"
           />
-          
+
           <Input
             label="Password"
             placeholder="Enter password"
@@ -83,7 +117,7 @@ const SignUpScreen = ({ navigation }) => {
             onChangeText={setPassword}
             secureTextEntry
           />
-          
+
           <Input
             label="Confirm Password"
             placeholder="Re-enter password"
@@ -91,7 +125,7 @@ const SignUpScreen = ({ navigation }) => {
             onChangeText={setConfirmPassword}
             secureTextEntry
           />
-          
+
           <Input
             label="Age"
             placeholder="Enter your age"
@@ -99,69 +133,78 @@ const SignUpScreen = ({ navigation }) => {
             onChangeText={setAge}
             keyboardType="numeric"
           />
-          
+
           <View style={styles.genderContainer}>
             <Text style={styles.label}>Gender</Text>
+
             <View style={styles.genderButtons}>
               <TouchableOpacity
                 style={[
                   styles.genderButton,
-                  gender === 'male' && styles.genderButtonSelected
+                  // If current gender is male, add selected style too
+                  gender === 'male' && styles.genderButtonSelected,
                 ]}
                 onPress={() => selectGender('male')}
               >
-                <Text style={[
-                  styles.genderButtonText,
-                  gender === 'male' && styles.genderButtonTextSelected
-                ]}>
+                <Text
+                  style={[
+                    styles.genderButtonText,
+                    gender === 'male' && styles.genderButtonTextSelected,
+                  ]}
+                >
                   Male
                 </Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 style={[
                   styles.genderButton,
-                  gender === 'female' && styles.genderButtonSelected
+                  gender === 'female' && styles.genderButtonSelected,
                 ]}
                 onPress={() => selectGender('female')}
               >
-                <Text style={[
-                  styles.genderButtonText,
-                  gender === 'female' && styles.genderButtonTextSelected
-                ]}>
+                <Text
+                  style={[
+                    styles.genderButtonText,
+                    gender === 'female' && styles.genderButtonTextSelected,
+                  ]}
+                >
                   Female
                 </Text>
               </TouchableOpacity>
-              
+
               <TouchableOpacity
                 style={[
                   styles.genderButton,
-                  gender === 'other' && styles.genderButtonSelected
+                  gender === 'other' && styles.genderButtonSelected,
                 ]}
                 onPress={() => selectGender('other')}
               >
-                <Text style={[
-                  styles.genderButtonText,
-                  gender === 'other' && styles.genderButtonTextSelected
-                ]}>
+                <Text
+                  style={[
+                    styles.genderButtonText,
+                    gender === 'other' && styles.genderButtonTextSelected,
+                  ]}
+                >
                   Other
                 </Text>
               </TouchableOpacity>
             </View>
           </View>
-          
-          <Button 
-            title="Sign Up" 
+
+          <Button
+            title="Sign Up"
             onPress={handleSignUp}
             style={styles.signUpButton}
           />
-          
-          <TouchableOpacity 
-            onPress={() => console.log('Go to login')}
+
+          <TouchableOpacity
+            onPress={() => router.push('/')}
             style={styles.loginLink}
           >
             <Text style={styles.loginText}>
-              Already have an account? <Text style={styles.loginTextBold}>Log In</Text>
+              Already have an account?{' '}
+              <Text style={styles.loginTextBold}>Log In</Text>
             </Text>
           </TouchableOpacity>
         </View>
@@ -204,6 +247,7 @@ const styles = StyleSheet.create({
     marginVertical: 8,
   },
   genderButtons: {
+    // Put gender buttons side by side
     flexDirection: 'row',
     justifyContent: 'space-between',
   },

@@ -10,7 +10,7 @@ import {
   TouchableOpacity,
 } from 'react-native';
 import { router } from 'expo-router';
-import LoginController from '../../../Controllers/LoginController';
+import LoginController from '../../../Controllers/LoginController.js';
 
 const LoginScreen = () => {
   const [email, setEmail] = useState('');

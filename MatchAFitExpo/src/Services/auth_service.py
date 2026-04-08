@@ -8,6 +8,7 @@ written by Juan Marco Saca Dada
 '''
 
 from Models.LogInModel import LogInModel
+from Models.SignUpModel import SignUpModel
 
 
 def login_user(email: str, password: str):
@@ -29,3 +30,23 @@ def login_user(email: str, password: str):
         "success": True,
         "user": user
     }
+
+def sign_up_user(email: str, password: str, confirm_password: str, age, gender: str):
+    model = SignUpModel(
+        email=email,
+        password=password,
+        confirm_password=confirm_password,
+        age=age,
+        gender=gender
+    )
+
+    is_valid, errors = model.validate()
+
+    if not is_valid:
+        return {
+            "success": False,
+            "errors": errors
+        }
+
+    return model.save()
+

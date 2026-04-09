@@ -20,32 +20,43 @@ MIN_AGE = 13
 class SignUpModel:
     def __init__(
         self,
+        first_name: str,
+        last_name: str,
         email: str,
         password: str,
         confirm_password: Optional[str] = None,
         age: Optional[int] = None,
         gender: Optional[str] = None,
-        first_name: Optional[str] = None,
-        last_name: Optional[str] = None,
+        phn_number: Optional[str] = None,
     ) -> None:
+        self.first_name = (first_name or "").strip()
+        self.last_name = (last_name or "").strip()
         self.email = (email or "").strip().lower()
         self.password = password or ""
         self.confirm_password = confirm_password
         self.age = age
         self.gender = (gender or "").strip().lower() if gender else None
-        self.first_name = (first_name or "").strip() or None
-        self.last_name = (last_name or "").strip() or None
+        self.phn_number = (phn_number or "").strip() or None
 
     def validate(self) -> Tuple[bool, List[str]]:
-        """Return (is_valid, errors).
-
-        Validation rules mirror the frontend `SignUpModel`:
-        - email format
-        - password length and optional confirm match
-        - age present, integer and >= MIN_AGE
-        - gender must be one of the allowed values
-        """
+        """Return (is_valid, errors)."""
         errors: List[str] = []
+
+        # first name
+        if not self.first_name:
+            errors.append("First name is required.")
+        elif len(self.first_name) > 50:
+            errors.append("First name must be less than 50 characters.")
+
+        # last name
+        if not self.last_name:
+            errors.append("Last name is required.")
+        elif len(self.last_name) > 50:
+            errors.append("Last name must be less than 50 characters.")
+
+        # phone number
+        if not self.phn_number:
+            errors.append("Phone number is required.")
 
         # email
         if not self.email:
@@ -59,7 +70,7 @@ class SignUpModel:
         elif len(self.password) < PASSWORD_MIN_LENGTH:
             errors.append(f"Password must be at least {PASSWORD_MIN_LENGTH} characters.")
 
-        # confirm password (only checked when provided)
+        # confirm password
         if self.confirm_password is not None and self.password != self.confirm_password:
             errors.append("Passwords do not match.")
 
@@ -91,11 +102,7 @@ class SignUpModel:
         return hashlib.sha256((password + salt).encode("utf-8")).hexdigest()
 
     def to_db_record(self) -> Dict[str, Any]:
-        """Return a dict ready to insert into the `users` table.
-
-        - generates salt and password_hash
-        - omits confirm_password
-        """
+        """Return a dict ready to insert into the `users` table."""
         salt = self.generate_salt()
         password_hash = self.hash_password(self.password, salt)
 
@@ -109,7 +116,6 @@ class SignUpModel:
             try:
                 record["age"] = int(self.age)
             except Exception:
-                # leave validation to `validate()` — caller should check before insert
                 pass
 
         if self.gender:
@@ -118,23 +124,62 @@ class SignUpModel:
             record["first_name"] = self.first_name
         if self.last_name:
             record["last_name"] = self.last_name
+        if self.phn_number:
+            record["phn_number"] = self.phn_number
 
         return record
 
     def save(self) -> Dict[str, Any]:
-        """Insert the user record into the database using `Connection.connection.get_supabase_client()`.
+        """
+        Insert the user record into the database.
 
-        Returns a normalized dict: { success: bool, message?: str, data?: any, error?: str }
+        Returns:
+        {
+            success: bool,
+            message?: str,
+            data?: any,
+            error?: str
+        }
         """
         client = get_supabase_client()
         record = self.to_db_record()
+
         try:
             inserted = client.table("users").insert(record).execute()
-            if getattr(inserted, "error", None):
-                return {"success": False, "error": str(inserted.error)}
-            return {"success": True, "message": "Account created", "data": inserted.data}
-        except Exception as e:
-            return {"success": False, "error": f"Insert failed: {e}"}
 
-    def __repr__(self) -> str:  # pragma: no cover - convenience only
+            if getattr(inserted, "error", None):
+                error_text = str(inserted.error).lower()
+
+                if "duplicate" in error_text or "unique" in error_text:
+                    return {
+                        "success": False,
+                        "error": "An account with that email already exists."
+                    }
+
+                return {
+                    "success": False,
+                    "error": str(inserted.error)
+                }
+
+            return {
+                "success": True,
+                "message": "Account created",
+                "data": inserted.data
+            }
+
+        except Exception as e:
+            error_text = str(e).lower()
+
+            if "duplicate" in error_text or "unique" in error_text:
+                return {
+                    "success": False,
+                    "error": "An account with that email already exists."
+                }
+
+            return {
+                "success": False,
+                "error": f"Insert failed: {e}"
+            }
+
+    def __repr__(self) -> str:
         return f"SignUpModel(email={self.email!r}, age={self.age!r}, gender={self.gender!r})"

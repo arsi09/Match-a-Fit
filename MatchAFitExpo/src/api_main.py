@@ -32,6 +32,9 @@ class LoginRequest(BaseModel):
 
 
 class SignUpRequest(BaseModel):
+    firstName: str
+    lastName: str
+    phnNumber: str
     email: str
     password: str
     confirmPassword: str
@@ -57,6 +60,9 @@ def login(data: LoginRequest):
 @app.post("/signup")
 def signup(data: SignUpRequest):
     return sign_up_user(
+        first_name=data.firstName,
+        last_name=data.lastName,
+        phn_number=data.phnNumber,
         email=data.email,
         password=data.password,
         confirm_password=data.confirmPassword,

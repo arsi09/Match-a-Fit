@@ -31,8 +31,21 @@ def login_user(email: str, password: str):
         "user": user
     }
 
-def sign_up_user(email: str, password: str, confirm_password: str, age, gender: str):
+
+def sign_up_user(
+    first_name: str,
+    last_name: str,
+    phn_number: str,
+    email: str,
+    password: str,
+    confirm_password: str,
+    age: int,
+    gender: str
+):
     model = SignUpModel(
+        first_name=first_name,
+        last_name=last_name,
+        phn_number=phn_number,
         email=email,
         password=password,
         confirm_password=confirm_password,
@@ -49,4 +62,3 @@ def sign_up_user(email: str, password: str, confirm_password: str, age, gender: 
         }
 
     return model.save()
-

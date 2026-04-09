@@ -8,11 +8,11 @@ import {
   Platform,
   Alert,
   TouchableOpacity,
+  TextInput,
 } from 'react-native';
 import { router } from 'expo-router';
 import { SignUpController } from '../../../Controllers/SignUpController';
 import Button from '../Components/Common/Button';
-import Input from '../Components/Common/Input';
 import Loading from '../Components/Common/Loading';
 
 /*
@@ -21,12 +21,17 @@ import Loading from '../Components/Common/Loading';
 */
 const SignUpScreen = () => {
   // useState creates variables that React watches for changes
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [age, setAge] = useState('');
   const [gender, setGender] = useState('');
   const [loading, setLoading] = useState(false);
+  const [phnNumber, setPhnNumber] = useState('');
 
   /*
     This function runs when the user presses the Sign Up button.
@@ -38,6 +43,9 @@ const SignUpScreen = () => {
 
     // Send current form values to the controller
     const result = await SignUpController.signUp({
+      firstName,
+      lastName,
+      phnNumber,
       email,
       password,
       confirmPassword,
@@ -101,8 +109,36 @@ const SignUpScreen = () => {
           <Text style={styles.title}>Create Account</Text>
           <Text style={styles.subtitle}>Sign up for Match-a-Fit</Text>
 
-          <Input
-            label="Email"
+          <Text style={styles.label}>First Name</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your first name"
+            value={firstName}
+            onChangeText={setFirstName}
+            autoCapitalize="words"
+          />
+
+          <Text style={styles.label}>Last Name</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your last name"
+            value={lastName}
+            onChangeText={setLastName}
+            autoCapitalize="words"
+          />
+
+          <Text style={styles.label}>Phone Number</Text>
+          <TextInput
+            style={styles.input}
+            placeholder="Enter your phone number"
+            value={phnNumber}
+            onChangeText={setPhnNumber}
+            keyboardType="phone-pad"
+          />
+
+          <Text style={styles.label}>Email</Text>
+          <TextInput
+            style={styles.input}
             placeholder="Enter your email"
             value={email}
             onChangeText={setEmail}
@@ -110,24 +146,49 @@ const SignUpScreen = () => {
             autoCapitalize="none"
           />
 
-          <Input
-            label="Password"
-            placeholder="Enter password"
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
+          <Text style={styles.label}>Password</Text>
+          <View style={styles.passwordWrapper}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Enter password"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry={!showPassword}
+              autoCapitalize="none"
+            />
+            <TouchableOpacity
+              onPress={() => setShowPassword(!showPassword)}
+              style={styles.eyeButton}
+            >
+              <Text style={styles.eyeText}>{showPassword ? '🙈' : '👁️'}</Text>
+            </TouchableOpacity>
+          </View>
 
-          <Input
-            label="Confirm Password"
-            placeholder="Re-enter password"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-            secureTextEntry
-          />
+          <Text style={styles.label}>Confirm Password</Text>
+          <View style={styles.passwordWrapper}>
+            <TextInput
+              style={styles.passwordInput}
+              placeholder="Re-enter password"
+              value={confirmPassword}
+              onChangeText={setConfirmPassword}
+              secureTextEntry={!showConfirmPassword}
+              autoCapitalize="none"
+            />
+            <TouchableOpacity
+              onPress={() =>
+                setShowConfirmPassword(!showConfirmPassword)
+              }
+              style={styles.eyeButton}
+            >
+              <Text style={styles.eyeText}>
+                {showConfirmPassword ? '🙈' : '👁️'}
+              </Text>
+            </TouchableOpacity>
+          </View>
 
-          <Input
-            label="Age"
+          <Text style={styles.label}>Age</Text>
+          <TextInput
+            style={styles.input}
             placeholder="Enter your age"
             value={age}
             onChangeText={setAge}
@@ -241,13 +302,46 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '600',
     marginBottom: 8,
+    marginTop: 8,
     color: '#333',
+  },
+  input: {
+    width: '100%',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#333',
+    backgroundColor: '#fff',
+  },
+  passwordWrapper: {
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#ddd',
+    borderRadius: 10,
+    backgroundColor: '#fff',
+  },
+  passwordInput: {
+    flex: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    fontSize: 14,
+    color: '#333',
+  },
+  eyeButton: {
+    paddingHorizontal: 12,
+  },
+  eyeText: {
+    fontSize: 18,
   },
   genderContainer: {
     marginVertical: 8,
   },
   genderButtons: {
-    // Put gender buttons side by side
     flexDirection: 'row',
     justifyContent: 'space-between',
   },

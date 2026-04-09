@@ -15,6 +15,37 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL;
   They just check whether the user's input is valid.
 */
 class SignUpValidator {
+
+  static validateFirstName(firstName) {
+    if (!firstName) {
+      return { isValid: false, error: 'First name is required.' };
+    }
+    if (firstName.length > 50) {
+      return { isValid: false, error: 'First name must be less than 50 characters.' };
+    }
+    return { isValid: true, error: null };
+  }
+  static validateLastName(lastName) {
+    if (!lastName) {
+      return { isValid: false, error: 'Last name is required.' };
+    } 
+    if (lastName.length > 50) {
+      return { isValid: false, error: 'Last name must be less than 50 characters.' };
+    }
+    return { isValid: true, error: null };
+  }
+
+  static validatePhoneNumber(phnNumber) {
+    if (!phnNumber) {
+      return { isValid: false, error: 'Phone number is required.' };
+    } 
+    const phoneRegex = /^\+?[1-9]\d{1,14}$/; // Basic international phone number format
+    if (!phoneRegex.test(phnNumber)) {
+      return { isValid: false, error: 'Phone number is invalid.' };
+    }
+    return { isValid: true, error: null };
+  }
+
   // Checks whether the email follows a basic email format
   static validateEmail(email) {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -96,6 +127,24 @@ export class SignUpController {
       */
       const errors = {};
 
+      if (!formData.firstName) {
+        errors.firstName = 'First name is required.';
+      } else if (formData.firstName.length > 50) {
+        errors.firstName = 'First name must be less than 50 characters.';
+      }
+      
+      if (!formData.lastName) {
+        errors.lastName = 'Last name is required.';
+      } else if (formData.lastName.length > 50) {
+        errors.lastName = 'Last name must be less than 50 characters.';
+      }
+
+      if (!formData.phnNumber) {
+        errors.phnNumber = 'Phone number is required.';
+      } else if (!SignUpValidator.validatePhoneNumber(formData.phnNumber)) {
+        errors.phnNumber = 'Phone number is invalid.';
+      }
+
       // ----- Validate email -----
       if (!formData.email) {
         errors.email = 'Email is required.';
@@ -149,6 +198,9 @@ export class SignUpController {
         - gender: lowercase it
       */
       const payload = {
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        phnNumber: formData.phnNumber.trim(),
         email: formData.email.trim().toLowerCase(),
         password: formData.password,
         confirmPassword: formData.confirmPassword,

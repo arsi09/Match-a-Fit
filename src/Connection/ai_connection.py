@@ -7,19 +7,20 @@ import os
 import google.generativeai as genai
 from dotenv import load_dotenv
 
-#Load the API key
 load_dotenv()
-GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 
-#Stop the program if the key is missing
-if not GOOGLE_API_KEY:
-    print ("Error: GOOGLE_API_KEY not found.")
-else:
-    genai.configure(api_key=GOOGLE_API_KEY)
+# Configure the Gemini SDK
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
-# Centralized model identifier
-MODEL_NAME = "gemini-1.5-flash"
-
-def get_gemini_model():
-    """Initializes and returns the Gemini model instance."""
-    return genai.GenerativeModel(MODEL_NAME)
+class GeminiClient:
+    """Configuration for Gemini 1.5 Flash"""
+    
+    # Using 1.5 Flash for speed and lower cost/latency
+    model = genai.GenerativeModel('gemini-1.5-flash')
+    
+    generation_config = {
+        "temperature": 0.4,
+        "top_p": 1,
+        "top_k": 32,
+        "max_output_tokens": 1024,
+    }

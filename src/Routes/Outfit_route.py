@@ -1,22 +1,18 @@
-'''
+"""
 outfit_route.py
-
-Created by Arsi 04/13/2026
-
-This module provides API routes for generating outfit recommendations.
-
+created by: Arsi 04/13/2026
 Purpose:
-- Trigger AI outfit generation ONLY when user requests it
-- Call the outfit AI service
-- Return outfit suggestions to the frontend
-'''
+- Provide an API endpoint that generates outfit suggestions
+- This route only runs when the user clicks "Generate Outfits" in the app
+"""
 
+# Import APIRouter to define route endpoints
 from fastapi import APIRouter
 
-# Import the main function from your AI service
+# Import the outfit service
 from Services.outfit_ai_service import generate_outfit_recommendations
 
-# Create router
+# Create the router object
 router = APIRouter()
 
 
@@ -25,15 +21,13 @@ def generate_outfits_route(user_id: int, occasion: str = None):
     """
     Generate outfit recommendations for a user.
 
-    Parameters:
-    - user_id: ID of the user
-    - occasion: optional (Casual, Formal, Gym, etc.)
-
-    This route ONLY runs when the frontend calls it.
+    URL example:
+    /generate-outfits/5
+    /generate-outfits/5?occasion=Casual
     """
 
     try:
-        # Call the AI service
+        # Call the service layer
         return generate_outfit_recommendations(user_id, occasion)
 
     except Exception as e:

@@ -44,8 +44,6 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Add the outfit generation routes to the app
-app.include_router(outfit_router)
 
 class LoginRequest(BaseModel):
     """
@@ -109,6 +107,8 @@ def signup(data: SignUpRequest):
         gender=data.gender,
     )
 
+# Add the outfit generation routes to the app
+app.include_router(outfit_router)
 
 # Add all photo upload routes to the app
 # This includes:
@@ -117,3 +117,6 @@ def signup(data: SignUpRequest):
 # - GET /photo-upload/user/{user_id}
 # - DELETE /photo-upload/{item_id}
 app.include_router(photo_upload_router)
+
+# Add all outfit generation routes to the app
+app.include_router(outfit_router)

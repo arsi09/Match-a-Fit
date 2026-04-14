@@ -23,12 +23,10 @@ class OutfitLibraryModel:
 
     OUTFITS_TABLE = "outfits"
     CLOTHING_TABLE = "clothing_items"  # Change this if your real clothing table name is different
+    CLOTHING_TABLE = "clothing_items"
 
     @staticmethod
     def _safe_response_data(response: Any) -> List[Dict[str, Any]]:
-        """
-        Safely returns response.data as a list.
-        """
         if response is None:
             return []
 
@@ -40,13 +38,9 @@ class OutfitLibraryModel:
         return []
 
     @staticmethod
-    def build_photo_uri(raw_photo: Any) -> Optional[str]:
+    def build_photo_uri(raw_photo: Any, mime_type: Optional[str] = None) -> Optional[str]:
         """
         Converts image text from the database into a React Native-friendly URI.
-
-        If the DB already stores a full data URI, keep it.
-        If it stores raw base64 like '/9j/4AAQSk...', convert it into:
-        data:image/jpeg;base64,/9j/4AAQSk...
         """
         if raw_photo is None:
             return None
@@ -59,13 +53,11 @@ class OutfitLibraryModel:
         if raw_photo.startswith("data:image"):
             return raw_photo
 
-        return f"data:image/jpeg;base64,{raw_photo}"
+        mime = str(mime_type or "image/jpeg").strip()
+        return f"data:{mime};base64,{raw_photo}"
 
     @classmethod
     def get_clothing_item_by_id(cls, item_id: Optional[int]) -> Optional[Dict[str, Any]]:
-        """
-        Loads one clothing item by ID from the clothing table.
-        """
         if not item_id:
             return None
 
@@ -92,45 +84,52 @@ class OutfitLibraryModel:
         item: Optional[Dict[str, Any]],
         fallback_label: str
     ) -> Optional[Dict[str, Any]]:
-        """
-        Converts one clothing row into the object shape the frontend expects.
-        """
         if not item or not isinstance(item, dict):
             return None
 
-        raw_photo = (
-            item.get("photo")
-            or item.get("image")
-            or item.get("image_text")
-            or item.get("photo_text")
-            or item.get("photo_base64")
-            or item.get("image_base64")
-        )
+        raw_photo = item.get("image")
+        mime_type = item.get("image_mime")
+
+        item_type = item.get("type")
 
         label = (
             item.get("name")
             or item.get("title")
-            or item.get("category")
+            or item_type
             or fallback_label
         )
 
         return {
             "id": item.get("id"),
             "label": label,
-            "category": item.get("category") or fallback_label,
-            "color": item.get("color"),
+            "category": item_type or fallback_label,
             "occasion": item.get("occasion"),
-            "photoUri": cls.build_photo_uri(raw_photo),
+            "photoUri": cls.build_photo_uri(raw_photo, mime_type),
         }
 
     @classmethod
     def normalize_outfit(cls, record: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Converts one outfit row into the format the frontend screen expects.
-        """
         upper_item = cls.get_clothing_item_by_id(record.get("upper_item_id"))
         lower_item = cls.get_clothing_item_by_id(record.get("lower_item_id"))
         footwear_item = cls.get_clothing_item_by_id(record.get("footwear_item_id"))
+
+        # Supports either "layer_item_id" or "layer"
+        layer_item_id = record.get("layer_item_id")
+        if layer_item_id is None:
+            layer_item_id = record.get("layer")
+
+        layer_item = cls.get_clothing_item_by_id(layer_item_id)
+
+        items = {
+            "Shirt": cls.normalize_clothing_item(upper_item, "Shirt"),
+            "Pants": cls.normalize_clothing_item(lower_item, "Pants"),
+            "Footwear": cls.normalize_clothing_item(footwear_item, "Footwear"),
+        }
+
+        # Only add Layer if it exists
+        normalized_layer = cls.normalize_clothing_item(layer_item, "Layer")
+        if normalized_layer:
+            items["Layer"] = normalized_layer
 
         return {
             "id": record.get("id"),
@@ -138,19 +137,11 @@ class OutfitLibraryModel:
             "occasion": record.get("occasion") or "Casual",
             "timeOfDay": "Anytime",
             "createdAt": record.get("created_at"),
-            "items": {
-                "Shirt": cls.normalize_clothing_item(upper_item, "Shirt"),
-                "Pants": cls.normalize_clothing_item(lower_item, "Pants"),
-                "Footwear": cls.normalize_clothing_item(footwear_item, "Footwear"),
-            },
+            "items": items,
         }
 
     @classmethod
     def get_outfits_by_user(cls, user_id: int) -> List[Dict[str, Any]]:
-        """
-        Loads all outfits for one user from the outfits table.
-        Newest first.
-        """
         if not user_id:
             return []
 
@@ -165,14 +156,10 @@ class OutfitLibraryModel:
         )
 
         rows = cls._safe_response_data(response)
-
         return [cls.normalize_outfit(row) for row in rows]
 
     @classmethod
     def delete_outfit(cls, outfit_id: int, user_id: int) -> bool:
-        """
-        Deletes one outfit if it belongs to the user.
-        """
         if not outfit_id or not user_id:
             return False
 
@@ -193,9 +180,6 @@ class OutfitLibraryModel:
         outfits: List[Dict[str, Any]],
         occasion: str = "All"
     ) -> List[Dict[str, Any]]:
-        """
-        Optional backend-side filtering helper.
-        """
         if not isinstance(outfits, list):
             return []
 

@@ -4,6 +4,7 @@
  * Purpose:
  * - Handles UI for Outfit Library Screen
  * - Displays saved outfits by occasion
+ * - Supports optional layering items
  * - Delegates backend calls to OutfitLibraryController
  */
 
@@ -36,8 +37,7 @@ const FilterChip = ({ label, active, onPress }) => (
   </TouchableOpacity>
 );
 
-// This is NOT a separate file.
-// It is just a small component inside this screen file.
+// Small outfit card component inside this same screen file
 const OutfitCard = ({ outfit, onDelete, isDeleting }) => (
   <View style={[styles.card, isDeleting && styles.cardFading]}>
     <View style={styles.cardHeader}>
@@ -48,19 +48,25 @@ const OutfitCard = ({ outfit, onDelete, isDeleting }) => (
     </View>
 
     <View style={styles.itemsContainer}>
-      {["Shirt", "Pants", "Footwear"].map((slot) =>
+      {["Layer", "Shirt", "Pants", "Footwear"].map((slot) =>
         outfit.items?.[slot] ? (
           <View key={slot} style={styles.itemRow}>
             <Text style={styles.itemLabel}>{slot}:</Text>
 
             <View style={styles.itemPhotoRow}>
-              <Image
-                source={{
-                  uri: OutfitLibraryController.getPhotoUri(outfit.items[slot]),
-                }}
-                style={styles.itemPhoto}
-                resizeMode="cover"
-              />
+              {OutfitLibraryController.getPhotoUri(outfit.items[slot]) ? (
+                <Image
+                  source={{
+                    uri: OutfitLibraryController.getPhotoUri(
+                      outfit.items[slot]
+                    ),
+                  }}
+                  style={styles.itemPhoto}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={styles.itemPhoto} />
+              )}
 
               <Text style={styles.itemValue}>
                 {outfit.items[slot]?.label || "Unknown Item"}
@@ -143,7 +149,9 @@ const OutfitLibraryScreen = () => {
 
               await OutfitLibraryController.deleteOutfit(id);
 
-              const updatedOutfits = outfits.filter((outfit) => outfit.id !== id);
+              const updatedOutfits = outfits.filter(
+                (outfit) => outfit.id !== id
+              );
               setOutfits(updatedOutfits);
             } catch (err) {
               Alert.alert("Error", err.message || "Failed to delete outfit");

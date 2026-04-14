@@ -73,7 +73,7 @@ def upload_photo(
         }
 
     # Make sure the user_id exists
-    if not user_id:
+    if user_id is None:
         return {
             "success": False,
             "error": "User ID is required"

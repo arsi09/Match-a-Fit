@@ -26,6 +26,11 @@ from Services.auth_service import login_user, sign_up_user
 # Import the photo upload router
 from Routes.photo_upload_route import router as photo_upload_router
 
+# Import the outfit generation router
+from Routes.Outfit_route import router as outfit_router
+
+
+
 # Create the FastAPI app
 app = FastAPI()
 
@@ -39,6 +44,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Add the outfit generation routes to the app
+app.include_router(outfit_router)
 
 class LoginRequest(BaseModel):
     """

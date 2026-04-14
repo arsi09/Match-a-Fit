@@ -2,6 +2,7 @@
 ai_connection.py
 made by: Pedro Jacobo
 revised by Arsi 04/13/2026
+updated to google.genai
 Purpose:
 - Connect to the Gemini API
 - Send clothing images + metadata to Gemini
@@ -14,14 +15,12 @@ import os
 # Import dotenv so .env values can be loaded
 from dotenv import load_dotenv
 
-# Import Gemini SDK
-import google.generativeai as genai
+# Import the current Gemini SDK
+from google import genai
+from google.genai import types
 
 # Load values from .env
 load_dotenv()
-
-# Configure Gemini with your API key
-genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 
 class GeminiClient:
@@ -29,7 +28,7 @@ class GeminiClient:
     Gemini client for Match-a-Fit.
 
     This class is responsible only for:
-    - configuring the Gemini model
+    - configuring the Gemini client
     - building the prompt
     - sending images + prompt to Gemini
     - returning the result
@@ -37,12 +36,18 @@ class GeminiClient:
 
     def __init__(self):
         """
-        Create the Gemini model instance.
+        Create the Gemini client.
 
-        We are using gemini-1.5-flash because it is cheaper
-        and fast enough for outfit generation.
+        The current google.genai SDK uses genai.Client(...)
+        instead of genai.configure(...) + GenerativeModel(...).
         """
-        self.model = genai.GenerativeModel("models/gemini-1.5-flash")
+        api_key = os.getenv("GEMINI_API_KEY")
+
+        if not api_key:
+            raise ValueError("GEMINI_API_KEY was not found in the environment.")
+
+        self.client = genai.Client(api_key=api_key)
+        self.model_name = "gemini-2.5-flash"
 
     def build_prompt(self, clothing_items, occasion=None):
         """
@@ -84,8 +89,8 @@ class GeminiClient:
         for item in clothing_items:
             prompt += (
                 f"- ID: {item['id']}, "
-                f"Type: {item['clothing_type']}, "
-                f"Occasion: {item['occasion']}\n"
+                f"Type: {item.get('clothing_type', 'Unknown')}, "
+                f"Occasion: {item.get('occasion', 'Unknown')}\n"
             )
 
         return prompt
@@ -117,9 +122,8 @@ class GeminiClient:
         # Build the text prompt
         prompt = self.build_prompt(clothing_items, occasion)
 
-        # Build the multimodal request
-        # First element is the text prompt
-        parts = [prompt]
+        # Build the multimodal contents list
+        contents = [prompt]
 
         # Add each clothing image as an inline image part
         for item in clothing_items:
@@ -130,19 +134,24 @@ class GeminiClient:
             if not image_bytes:
                 continue
 
-            parts.append({
-                "mime_type": image_mime,
-                "data": image_bytes
-            })
+            contents.append(
+                types.Part.from_bytes(
+                    data=image_bytes,
+                    mime_type=image_mime
+                )
+            )
 
         try:
             # Send request to Gemini
-            response = self.model.generate_content(parts)
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=contents
+            )
 
             # Return Gemini text back to the service layer
             return {
                 "success": True,
-                "model": "models/gemini-1.5-flash",
+                "model": self.model_name,
                 "response_text": response.text
             }
 

@@ -7,15 +7,16 @@
  * - Delegates all backend logic to OutfitLibraryController
  */
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  View, 
-  Text, 
-  StyleSheet,
-  ScrollView, 
   ActivityIndicator,
   Alert,
-  TouchableOpacity
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import OutfitLibraryController from '../../../Controllers/OutfitLibraryController';
 
@@ -48,10 +49,19 @@ const OutfitCard = ({ outfit, onEdit, onDelete, isDeleting }) => (
         {/* List of outfit items */}
         <View style={styles.itemsContainer}>
             {['Shirt', 'Pants', 'Dress', 'Shorts/Skirt','Jacket/Hoodie'].map((slot) => (
-                <View key={slot} style={styles.itemRow}>
-                    <Text style={styles.itemLabel}>{slot}:</Text>
-                    <Text style={styles.itemValue}>{outfit.items[slot]}</Text>
-                </View>
+                outfit.items[slot] ? (
+                  <View key={slot} style={styles.itemRow}>
+                      <Text style={styles.itemLabel}>{slot}:</Text>
+                      <View style = {styles.itemPhotoRow}>
+                          <Image 
+                              source={{ uri: OutfitLibraryController.getPhotoUri(outfit.items[slot]) }}
+                              style={styles.itemPhoto}
+                              resizeMode="cover"
+                          />
+                          <Text style={styles.itemValue}>{outfit.items[slot]}</Text>
+                      </View>
+                  </View>
+                ) : null
             ))}
         </View>
     
@@ -232,8 +242,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
 
-  // ── Filter bar ────────────────────────────────────────────────────────────────
-
+  // ── Filter bar
   filterCard: {
     backgroundColor: '#fff',
     borderRadius: 16,
@@ -295,7 +304,7 @@ const styles = StyleSheet.create({
     gap: 14,
   },
 
-  // ── Empty state ───────────────────────────────────────────────────────────────
+  // ── Empty state
 
   emptyContainer: {
     backgroundColor: '#fff',
@@ -330,7 +339,7 @@ const styles = StyleSheet.create({
     maxWidth: 240,
   },
 
-  // ── Outfit card ───────────────────────────────────────────────────────────────
+  // ── Outfit card
 
   card: {
     backgroundColor: '#fff',
@@ -376,6 +385,7 @@ const styles = StyleSheet.create({
 
   itemRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
   },
 
@@ -386,6 +396,19 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     textTransform: 'capitalize',
     flexShrink: 0,
+  },
+
+  itemPhotoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flex: 1,
+  },
+
+  itemPhoto: {
+    width: 40,
+    height: 40,
+    borderRadius: 6,
   },
 
   itemValue: {

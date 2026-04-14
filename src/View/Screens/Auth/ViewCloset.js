@@ -7,15 +7,16 @@
  * - Delegates all backend logic to ViewClosetController
  */
 
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import {
-  View, 
-  Text, 
-  StyleSheet,
-  ScrollView, 
   ActivityIndicator,
   Alert,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
   TouchableOpacity,
+  View
 } from 'react-native';
 import ViewClosetController from '../../../Controllers/ViewClosetController';
 
@@ -30,41 +31,41 @@ const CategoryBadge = ({ category, count}) => (
     </View>
 );
 
-//Display clothing item card with information about the item and delete button
+//Display clothing item card with photo and details, also handles delete button
 const ClothingCard = ({ item, onDelete, isDeleting }) => (
-    <View style={[styles.card, isDeleting && styles.cardFading]}>
+    <View style ={[styles.card, isDeleting && styles.cardFading]}>
+      <Image 
+        source={{ uri: item.photoUrl }} 
+        style={styles.cardSwatch}
+        resizeMode="cover"
+      />
 
-        {/* Colored swatch at top of card based on item's color */}
-        <View style = {[styles.cardSwatch, {backgroundColor: item.color}]} />
-
-        <View style = {styles.cardBody}>
-            <View style = {styles.cardTopRow}>
-                <View style = {styles.categoryPill}>
-                    <Text style = {styles.categoryPillText}>{item.category}</Text>
-                </View>
-                <View style = {styles.colorRow}>
-                    <View style = {[styles.colorDot, {backgroundColor: item.color}]} />
-                    <Text style = {styles.colorText}>{item.color}</Text>
-                </View>
-            </View>
-
-            {/* Show date item was added at bottom of card */}
-            <Text style = {styles.dateText}>
-                Added {new Date(item.uploadedAt).toLocaleDateString()}
-            </Text>
-
-            {/*Delete button that shows loading spinner*/}
-            <TouchableOpacity
-                style = {styles.deleteBtn}
-                onPress={onDelete}
-                disabled={isDeleting}
-            >
-                {isDeleting 
-                    ? <ActivityIndicator color="#dc2626" size = "small" />
-                    : <Text style = {styles.deleteBtnText}>Delete 🗑</Text>
-                }
-            </TouchableOpacity>
+      <View style ={styles.cardBody}>
+        <View style={styles.cardTopRow}>
+          <View style={styles.categoryPill}>
+            <Text style={styles.categoryPillText}>{item.category}</Text>
+          </View>
+          <View style={styles.colorRow}>
+            <View style={[styles.colorDot, { backgroundColor: item.color }]} />
+            <Text style={styles.colorText}>{item.color}</Text>
+          </View>
         </View>
+
+        <Text style={styles.dateText}>
+          Added {new Date(item.uploadedAt).toLocaleDateString()}
+        </Text>
+
+        <TouchableOpacity
+          style={styles.deleteBtn}
+          onPress={onDelete}
+          disabled={isDeleting}
+        >
+          {isDeleting 
+            ? <ActivityIndicator size="small" color="#dc2626" />
+            : <Text style={styles.deleteBtnText}>Delete 🗑</Text>
+          }
+        </TouchableOpacity>
+      </View>
     </View>
 );
 
@@ -204,17 +205,17 @@ const ViewClosetScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#dbeafe', // light blue background
+    backgroundColor: '#daf0f7', // light blue teal background
   },
  
   loaderContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#dbeafe',
+    backgroundColor: '#daf0f7',
   },
  
-  // ── Header ────────────────────────────────────────────────────────────────────
+  // ── Header 
  
   header: {
     backgroundColor: '#ffffff',
@@ -250,7 +251,7 @@ const styles = StyleSheet.create({
   },
  
   itemCountBadge: {
-    backgroundColor: '#dbeafe',
+    backgroundColor: '#daf0f7',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 10,
@@ -262,7 +263,7 @@ const styles = StyleSheet.create({
     color: '#1d4ed8',
   },
  
-  // ── Scroll content ────────────────────────────────────────────────────────────
+  // ── Scroll content
  
   scrollContent: {
     padding: 16,

@@ -22,7 +22,6 @@ class OutfitLibraryModel:
     """
 
     OUTFITS_TABLE = "outfits"
-    CLOTHING_TABLE = "clothing_items"  # Change this if your real clothing table name is different
     CLOTHING_TABLE = "clothing_items"
 
     @staticmethod

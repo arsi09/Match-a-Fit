@@ -26,6 +26,11 @@ from Services.auth_service import login_user, sign_up_user
 # Import the photo upload router
 from Routes.photo_upload_route import router as photo_upload_router
 
+# Import the outfit generation router
+from Routes.Outfit_route import router as outfit_router
+
+
+
 # Create the FastAPI app
 app = FastAPI()
 
@@ -102,6 +107,8 @@ def signup(data: SignUpRequest):
         gender=data.gender,
     )
 
+# Add the outfit generation routes to the app
+app.include_router(outfit_router)
 
 # Add all photo upload routes to the app
 # This includes:
@@ -110,3 +117,6 @@ def signup(data: SignUpRequest):
 # - GET /photo-upload/user/{user_id}
 # - DELETE /photo-upload/{item_id}
 app.include_router(photo_upload_router)
+
+# Add all outfit generation routes to the app
+app.include_router(outfit_router)

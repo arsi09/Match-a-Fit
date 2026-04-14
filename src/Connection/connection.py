@@ -31,7 +31,15 @@ from supabase import create_client, Client
 # If dotenv is not installed, the code will continue silently.
 try:
     from dotenv import load_dotenv
-    load_dotenv()
+    from pathlib import Path
+    # Walk up directories until .env is found (handles any nesting depth)
+    env_path = Path(__file__).resolve().parent
+    while env_path != env_path.parent:
+        candidate = env_path / ".env"
+        if candidate.exists():
+            load_dotenv(candidate)
+            break
+        env_path = env_path.parent
 except Exception:
     pass
 
@@ -40,14 +48,8 @@ except Exception:
 # Configuration Variables
 # ------------------------------------------------------------
 # These read from environment variables.
-# If not found, they default to empty string "".
-# You SHOULD define them in your .env file like:
-#
-# SUPABASE_URL=https://yourproject.supabase.co
-# SUPABASE_KEY=your_anon_or_service_role_key
-#
-DEFAULT_SUPABASE_URL = os.getenv("SUPABASE_URL", "https://vditmcedjuuphmalidpw.supabase.co").strip()
-DEFAULT_SUPABASE_KEY = os.getenv("SUPABASE_KEY", "sb_publishable_lu1DZ3v-baU8XzzQgVEGtA_xJHM8eAG").strip()
+DEFAULT_SUPABASE_URL = os.getenv("SUPABASE_URL").strip() 
+DEFAULT_SUPABASE_KEY = os.getenv("SUPABASE_KEY").strip() 
 
 
 # ------------------------------------------------------------

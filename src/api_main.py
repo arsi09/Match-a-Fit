@@ -29,6 +29,9 @@ from Routes.photo_upload_route import router as photo_upload_router
 # Import the outfit generation router
 from Routes.Outfit_route import router as outfit_router
 
+## Import the outfit library router
+from Routes.outfit_library_route import router as outfit_library_router
+
 
 
 # Create the FastAPI app
@@ -120,3 +123,6 @@ app.include_router(photo_upload_router)
 
 # Add all outfit generation routes to the app
 app.include_router(outfit_router)
+
+# Add all outfit library routes to the app
+app.include_router(outfit_library_router)

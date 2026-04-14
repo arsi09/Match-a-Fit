@@ -1,91 +1,76 @@
 """
 ai_connection.py
 made by: Pedro Jacobo
-revised by Arsi 04/13/2026
-updated to google.genai
+revised by Gemini 04/14/2026
+updated to google.genai 3.1
 Purpose:
 - Connect to the Gemini API
 - Send clothing images + metadata to Gemini
-- Return outfit suggestions to the service layer
+- Return outfit suggestions to the service layer with weather awareness
 """
 
-# Import os so we can read environment variables
 import os
-
-# Import dotenv so .env values can be loaded
 from dotenv import load_dotenv
-
-# Import the current Gemini SDK
 from google import genai
 from google.genai import types
+from pathlib import Path
 
 # Load values from .env
-load_dotenv()
+try:
+    # Walk up directories until .env is found (handles any nesting depth)
+    env_path = Path(__file__).resolve().parent
+    while env_path != env_path.parent:
+        candidate = env_path / ".env"
+        if candidate.exists():
+            load_dotenv(candidate)
+            break
+        env_path = env_path.parent
+except Exception:
+    print("Warning: python-dotenv is not installed or .env file not found.")
 
 
 class GeminiClient:
     """
     Gemini client for Match-a-Fit.
-
-    This class is responsible only for:
-    - configuring the Gemini client
-    - building the prompt
-    - sending images + prompt to Gemini
-    - returning the result
     """
 
     def __init__(self):
-        """
-        Create the Gemini client.
-
-        The current google.genai SDK uses genai.Client(...)
-        instead of genai.configure(...) + GenerativeModel(...).
-        """
         api_key = os.getenv("GEMINI_API_KEY")
-
         if not api_key:
             raise ValueError("GEMINI_API_KEY was not found in the environment.")
 
+        # Initialize the new Google GenAI Client
         self.client = genai.Client(api_key=api_key)
-        self.model_name = "gemini-2.5-flash"
+        
+        # Using Gemini 3.1 Flash for best-in-class image reasoning
+        self.model_name = "gemini-3.1-flash"
 
-    def build_prompt(self, clothing_items, occasion=None):
+    def build_prompt(self, clothing_items, occasion=None, weather=None):
         """
         Build the text instructions sent to Gemini.
-
-        Parameters:
-        - clothing_items: list of clothing item dictionaries
-        - occasion: optional occasion filter like Casual or Formal
-
-        Returns:
-        - prompt string
         """
-
         prompt = (
-            "You are a fashion assistant for a mobile app called Match-a-Fit. "
-            "You will receive clothing images and item metadata. "
-            "Create outfit combinations using only the provided clothing items. "
-            "Try to pair tops with bottoms, and include other matching pieces when appropriate. "
-            "Do not invent clothing items that were not provided. "
+            "You are a professional fashion assistant for Match-a-Fit. "
+            "Analyze the provided clothing images and metadata to create a cohesive outfit. "
+            "Rule 1: Use ONLY the provided items. "
+            "Rule 2: You must pair at least one top and one bottom. "
         )
 
         if occasion:
-            prompt += f"Focus on outfits suitable for this occasion: {occasion}. "
+            prompt += f"Target Occasion: {occasion}. "
+        
+        if weather:
+            prompt += f"Current Weather: {weather}. Ensure the outfit is functionally appropriate. "
 
         prompt += (
-            "Return your answer as plain JSON only. "
-            "Use this format: "
-            "["
-            "{"
-            "\"outfit_name\": \"string\", "
-            "\"item_ids\": [1, 2], "
-            "\"explanation\": \"string\""
-            "}"
-            "]"
+            "\nOutput Requirements:\n"
+            "Return a JSON array of objects. Each object must include:\n"
+            "- 'outfit_name': A creative name for the look.\n"
+            "- 'item_ids': An array of integers corresponding to the IDs provided.\n"
+            "- 'explanation': Why these items work together for the occasion/weather.\n"
         )
 
-        prompt += "\n\nHere are the clothing items:\n"
-
+        prompt += "\nInventory List:\n"
         for item in clothing_items:
             prompt += (
                 f"- ID: {item['id']}, "
@@ -95,60 +80,40 @@ class GeminiClient:
 
         return prompt
 
-    def generate_outfits(self, clothing_items, occasion=None):
+    def generate_outfits(self, clothing_items, occasion=None, weather=None):
         """
-        Send clothing items to Gemini and return outfit suggestions.
-
-        Parameters:
-        - clothing_items: list of dicts containing:
-            id
-            image_bytes
-            image_mime
-            clothing_type
-            occasion
-        - occasion: optional occasion filter
-
-        Returns:
-        - dict with success flag and Gemini output
+        Send clothing items to Gemini and return structured outfit suggestions.
         """
-
-        # Make sure we actually received items
         if not clothing_items:
-            return {
-                "success": False,
-                "error": "No clothing items were provided to Gemini."
-            }
+            return {"success": False, "error": "No clothing items provided."}
 
-        # Build the text prompt
-        prompt = self.build_prompt(clothing_items, occasion)
-
-        # Build the multimodal contents list
+        prompt = self.build_prompt(clothing_items, occasion, weather)
+        
+        # Multimodal content list: Starts with the text prompt
         contents = [prompt]
 
-        # Add each clothing image as an inline image part
+        # Add image parts from the bitstrings
         for item in clothing_items:
             image_bytes = item.get("image_bytes")
-            image_mime = item.get("image_mime") or "image/jpeg"
+            if image_bytes:
+                contents.append(
+                    types.Part.from_bytes(
+                        data=image_bytes,
+                        mime_type=item.get("image_mime", "image/jpeg")
+                    )
+                )
 
-            # Skip any item missing image bytes
-            if not image_bytes:
-                continue
-
-            contents.append(
-                types.Part.from_bytes(
-                    data=image_bytes,
-                    mime_type=image_mime
+        try:
+            # Generate content with JSON enforcement
+            response = self.client.models.generate_content(
+                model=self.model_name,
+                contents=contents,
+                config=types.GenerateContentConfig(
+                    response_mime_type="application/json",
+                    temperature=0.7 # Slight creativity for fashion advice
                 )
             )
 
-        try:
-            # Send request to Gemini
-            response = self.client.models.generate_content(
-                model=self.model_name,
-                contents=contents
-            )
-
-            # Return Gemini text back to the service layer
             return {
                 "success": True,
                 "model": self.model_name,
@@ -156,7 +121,4 @@ class GeminiClient:
             }
 
         except Exception as e:
-            return {
-                "success": False,
-                "error": str(e)
-            }
+            return {"success": False, "error": str(e)}

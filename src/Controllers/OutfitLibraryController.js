@@ -1,119 +1,153 @@
+/**
+ * OutfitLibraryController.js
+ * Purpose:
+ * - Connects OutfitLibraryScreen to the backend
+ * - Loads saved outfits for the current user
+ * - Deletes outfits
+ * - Filters outfits by occasion
+ * - Converts base64 image text into a displayable image URI
+ */
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const CURRENT_USER_KEY = 'matchafit_currentUser';
-const OUTFIT_LIBRARY_KEY = 'matchafit_outfitLibrary';
-
-const REQUIRED_SLOTS = ['Shirt', 'Pants', 'Dress', 'Shorts/Skirt', 'Jacket/Hoodie'];
 
 class OutfitLibraryController {
-	static normalizeOutfit(rawOutfit = {}, index = 0) {
-		const safeItems = {};
+  /**
+   * Gets the current logged-in user from AsyncStorage
+   */
+  static async getCurrentUser() {
+    try {
+      const raw = await AsyncStorage.getItem(CURRENT_USER_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (error) {
+      return null;
+    }
+  }
 
-		REQUIRED_SLOTS.forEach((slot) => {
-			safeItems[slot] = rawOutfit?.items?.[slot] || 'N/A';
-		});
+  /**
+   * Loads outfits for the current user from the backend
+   */
+  static async loadOutfits() {
+    const user = await this.getCurrentUser();
+    const userId = user?.id;
 
-		return {
-			id: rawOutfit.id ?? `local-${Date.now()}-${index}`,
-			occasion: rawOutfit.occasion || 'Casual',
-			timeOfDay: rawOutfit.timeOfDay || 'Anytime',
-			items: safeItems,
-			createdAt: rawOutfit.createdAt || new Date().toISOString(),
-		};
-	}
+    if (!API_URL) {
+      throw new Error('API URL is missing. Check EXPO_PUBLIC_API_URL.');
+    }
 
-	static normalizeOutfits(outfits = []) {
-		if (!Array.isArray(outfits)) {
-			return [];
-		}
+    if (!userId) {
+      throw new Error('No logged in user found.');
+    }
 
-		return outfits.map((outfit, index) => this.normalizeOutfit(outfit, index));
-	}
+    const response = await fetch(`${API_URL}/outfit-library/user/${userId}`);
+    const data = await response.json();
 
-	static async loadLocalOutfits() {
-		const raw = await AsyncStorage.getItem(OUTFIT_LIBRARY_KEY);
-		const parsed = raw ? JSON.parse(raw) : [];
-		return this.normalizeOutfits(parsed);
-	}
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Failed to load outfits');
+    }
 
-	static async saveLocalOutfits(outfits = []) {
-		await AsyncStorage.setItem(OUTFIT_LIBRARY_KEY, JSON.stringify(outfits));
-	}
+    return Array.isArray(data.outfits) ? data.outfits : [];
+  }
 
-	static async getCurrentUser() {
-		try {
-			const raw = await AsyncStorage.getItem(CURRENT_USER_KEY);
-			return raw ? JSON.parse(raw) : null;
-		} catch (error) {
-			return null;
-		}
-	}
+  /**
+   * Deletes one outfit for the current user
+   */
+  static async deleteOutfit(outfitId) {
+    const user = await this.getCurrentUser();
+    const userId = user?.id;
 
-	static async loadOutfits() {
-		const localOutfits = await this.loadLocalOutfits();
+    if (!API_URL) {
+      throw new Error('API URL is missing. Check EXPO_PUBLIC_API_URL.');
+    }
 
-		if (!API_URL) {
-			return localOutfits;
-		}
+    if (!userId) {
+      throw new Error('No logged in user found.');
+    }
 
-		try {
-			const user = await this.getCurrentUser();
+    if (!outfitId) {
+      throw new Error('Outfit ID is required.');
+    }
 
-			if (!user?.id) {
-				return localOutfits;
-			}
+    const response = await fetch(`${API_URL}/outfit-library/delete`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        outfit_id: outfitId,
+        user_id: userId,
+      }),
+    });
 
-			const response = await fetch(`${API_URL}/outfits/user/${user.id}`);
-			const data = await response.json();
+    const data = await response.json();
 
-			if (!response.ok || !data?.success) {
-				return localOutfits;
-			}
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Failed to delete outfit');
+    }
 
-			const apiOutfits = this.normalizeOutfits(data.outfits || []);
+    return data;
+  }
 
-			if (apiOutfits.length > 0) {
-				await this.saveLocalOutfits(apiOutfits);
-			}
+  /**
+   * Filters outfits by occasion on the frontend
+   */
+  static filterByOccasion(outfits = [], selectedOccasion = 'All') {
+    if (!Array.isArray(outfits)) {
+      return [];
+    }
 
-			return apiOutfits;
-		} catch (error) {
-			return localOutfits;
-		}
-	}
+    if (!selectedOccasion || String(selectedOccasion).trim().toLowerCase() === 'all') {
+      return outfits;
+    }
 
-	static filterByOccasion(outfits = [], activeOccasion = 'All') {
-		const normalized = this.normalizeOutfits(outfits);
+    const selected = String(selectedOccasion).trim().toLowerCase();
 
-		if (!activeOccasion || activeOccasion === 'All') {
-			return normalized;
-		}
+    return outfits.filter((outfit) => {
+      return String(outfit?.occasion || '').trim().toLowerCase() === selected;
+    });
+  }
 
-		const target = String(activeOccasion).trim().toLowerCase();
-		return normalized.filter((outfit) => String(outfit.occasion).trim().toLowerCase() === target);
-	}
+  /**
+   * Converts image data into a URI React Native can display
+   *
+   * Handles:
+   * - already formatted data URIs
+   * - raw base64 text from database like "/9j/4AAQ..."
+   * - a few possible property names
+   */
+  static getPhotoUri(item) {
+    if (!item || typeof item !== 'object') {
+      return null;
+    }
 
-	static async deleteOutfit(outfitId, currentOutfits = []) {
-		const normalized = this.normalizeOutfits(currentOutfits);
-		const updated = normalized.filter((outfit) => String(outfit.id) !== String(outfitId));
+    const raw =
+      item.photoUri ||
+      item.photo ||
+      item.image ||
+      item.image_text ||
+      item.photo_text ||
+      item.photo_base64 ||
+      item.image_base64 ||
+      null;
 
-		await this.saveLocalOutfits(updated);
+    if (!raw || typeof raw !== 'string') {
+      return null;
+    }
 
-		if (!API_URL) {
-			return updated;
-		}
+    const cleaned = raw.trim();
 
-		try {
-			await fetch(`${API_URL}/outfits/${outfitId}`, {
-				method: 'DELETE',
-			});
-		} catch (error) {
-			// Keep the UI responsive by returning locally updated state even if API delete fails.
-		}
+    if (!cleaned) {
+      return null;
+    }
 
-		return updated;
-	}
+    if (cleaned.startsWith('data:image')) {
+      return cleaned;
+    }
+
+    return `data:image/jpeg;base64,${cleaned}`;
+  }
 }
 
 export default OutfitLibraryController;

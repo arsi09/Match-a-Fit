@@ -41,6 +41,7 @@ try:
             break
         env_path = env_path.parent
 except Exception:
+    print("Warning: python-dotenv is not installed or .env file not found. Environment variables may not be loaded.")
     pass
 
 

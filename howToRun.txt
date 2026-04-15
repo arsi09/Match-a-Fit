@@ -12,4 +12,6 @@
 
  run: npx expo start -c
 
+if npx expo start -c runs but the qr code does not work and the website does work use: 
+set REACT_NATIVE_PACKAGER_HOSTNAME=10.102.35.166
  

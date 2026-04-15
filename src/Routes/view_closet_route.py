@@ -2,32 +2,33 @@
 view_closet_route.py
 
 Purpose:
-- Get all closet items for one user
-- Delete a closet item
+- API routes for closet items
 """
 
-from fastapi import APIRouter, HTTPException
-from Models.ViewClosetModel import ViewClosetModel
+from fastapi import APIRouter
+from pydantic import BaseModel
+
+from Services.view_closet_service import (
+    get_user_clothing_items,
+    delete_user_clothing_item,
+)
 
 router = APIRouter(
     prefix="/view-closet",
-    tags=["view-closet"]
+    tags=["View Closet"]
 )
 
 
+class DeleteClothingItemRequest(BaseModel):
+    item_id: int
+    user_id: int
+
+
 @router.get("/user/{user_id}")
-def get_user_closet(user_id: int):
-    try:
-        items = ViewClosetModel.get_items_by_user_id(user_id)
-        return {"items": items}
-    except Exception as error:
-        raise HTTPException(status_code=500, detail=str(error))
+def load_clothing_items(user_id: int):
+    return get_user_clothing_items(user_id)
 
 
-@router.delete("/{item_id}")
-def delete_closet_item(item_id: int):
-    try:
-        ViewClosetModel.delete_item(item_id)
-        return {"success": True}
-    except Exception as error:
-        raise HTTPException(status_code=500, detail=str(error))
+@router.delete("/delete")
+def delete_clothing_item(payload: DeleteClothingItemRequest):
+    return delete_user_clothing_item(payload.item_id, payload.user_id)

@@ -4,7 +4,7 @@ ViewClosetModel.py
 Purpose:
 - Get all clothing items for a specific user
 - Delete one clothing item
-- Convert base64 image text into a frontend-friendly data URI
+- Convert image text stored in the database into frontend-friendly data URIs
 """
 
 from __future__ import annotations
@@ -15,11 +15,7 @@ from Connection.connection import get_supabase_client
 
 
 class ViewClosetModel:
-    """
-    Handles database logic for viewing closet items.
-    """
-
-    TABLE_NAME = "clothing_items"
+    CLOTHING_TABLE = "clothing_items"
 
     @staticmethod
     def _safe_response_data(response: Any) -> List[Dict[str, Any]]:
@@ -53,19 +49,22 @@ class ViewClosetModel:
         return f"data:{mime};base64,{raw_photo}"
 
     @classmethod
-    def normalize_clothing_item(cls, item: Dict[str, Any]) -> Dict[str, Any]:
-        raw_photo = item.get("image")
-        mime_type = item.get("image_mime")
+    def normalize_item(cls, item: Dict[str, Any]) -> Dict[str, Any]:
+        item_type = item.get("type") or "Other"
 
         return {
             "id": item.get("id"),
-            "type": item.get("type") or "Unknown",
-            "occasion": item.get("occasion") or "Casual",
             "user_id": item.get("user_id"),
+            "type": item_type,
+            "occasion": item.get("occasion") or "Casual",
             "uploaded_at": item.get("uploaded_at"),
-            "image_mime": mime_type or "image/jpeg",
+            "image": item.get("image"),
+            "image_mime": item.get("image_mime"),
             "image_filename": item.get("image_filename"),
-            "photoUri": cls.build_photo_uri(raw_photo, mime_type),
+            "photoUri": cls.build_photo_uri(
+                item.get("image"),
+                item.get("image_mime")
+            ),
         }
 
     @classmethod
@@ -76,7 +75,7 @@ class ViewClosetModel:
         supabase = get_supabase_client()
 
         response = (
-            supabase.table(cls.TABLE_NAME)
+            supabase.table(cls.CLOTHING_TABLE)
             .select("id, image, image_filename, image_mime, type, occasion, user_id, uploaded_at")
             .eq("user_id", user_id)
             .order("uploaded_at", desc=True)
@@ -84,20 +83,37 @@ class ViewClosetModel:
         )
 
         rows = cls._safe_response_data(response)
-        return [cls.normalize_clothing_item(row) for row in rows]
+        return [cls.normalize_item(row) for row in rows]
 
     @classmethod
-    def delete_item(cls, item_id: int) -> bool:
-        if not item_id:
+    def delete_item(cls, item_id: int, user_id: int) -> bool:
+        if not item_id or not user_id:
             return False
 
         supabase = get_supabase_client()
 
         response = (
-            supabase.table(cls.TABLE_NAME)
+            supabase.table(cls.CLOTHING_TABLE)
             .delete()
             .eq("id", item_id)
+            .eq("user_id", user_id)
             .execute()
         )
 
         return response is not None
+
+    @staticmethod
+    def filter_by_type(items: List[Dict[str, Any]], selected_type: str = "All") -> List[Dict[str, Any]]:
+        if not isinstance(items, list):
+            return []
+
+        if not selected_type or str(selected_type).strip().lower() == "all":
+            return items
+
+        selected = str(selected_type).strip().lower()
+
+        return [
+            item
+            for item in items
+            if str(item.get("type", "")).strip().lower() == selected
+        ]

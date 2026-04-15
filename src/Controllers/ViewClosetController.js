@@ -1,167 +1,148 @@
+/**
+ * ViewClosetController.js
+ * Purpose:
+ * - Connects ViewClosetScreen to the backend
+ * - Loads saved clothing items for the current user
+ * - Deletes clothing items
+ * - Filters items by type
+ * - Converts base64 image text into a displayable image URI
+ */
+
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { router } from 'expo-router';
 
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
-
 const CURRENT_USER_KEY = 'matchafit_currentUser';
-const USER_DATA_KEY = 'userData';
-const CLOSET_ITEMS_KEY = 'matchafit_closetItems';
 
 class ViewClosetController {
+  /**
+   * Gets the current logged-in user from AsyncStorage
+   */
   static async getCurrentUser() {
     try {
-      const currentUserRaw = await AsyncStorage.getItem(CURRENT_USER_KEY);
-      if (currentUserRaw) {
-        return JSON.parse(currentUserRaw);
-      }
-
-      const userDataRaw = await AsyncStorage.getItem(USER_DATA_KEY);
-      if (userDataRaw) {
-        return JSON.parse(userDataRaw);
-      }
-
-      return null;
+      const raw = await AsyncStorage.getItem(CURRENT_USER_KEY);
+      return raw ? JSON.parse(raw) : null;
     } catch (error) {
       return null;
     }
   }
 
-  static redirectToLogin() {
-    router.replace('/LoginScreen');
+  /**
+   * Loads clothing items for the current user from the backend
+   */
+  static async loadItems() {
+    const user = await this.getCurrentUser();
+    const userId = user?.id;
+
+    if (!API_URL) {
+      throw new Error('API URL is missing. Check EXPO_PUBLIC_API_URL.');
+    }
+
+    if (!userId) {
+      throw new Error('No logged in user found.');
+    }
+
+    const response = await fetch(`${API_URL}/view-closet/user/${userId}`);
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Failed to load clothing items');
+    }
+
+    return Array.isArray(data.items) ? data.items : [];
   }
 
-  static goBack() {
-    router.back();
+  /**
+   * Deletes one clothing item for the current user
+   */
+  static async deleteItem(itemId) {
+    const user = await this.getCurrentUser();
+    const userId = user?.id;
+
+    if (!API_URL) {
+      throw new Error('API URL is missing. Check EXPO_PUBLIC_API_URL.');
+    }
+
+    if (!userId) {
+      throw new Error('No logged in user found.');
+    }
+
+    if (!itemId) {
+      throw new Error('Item ID is required.');
+    }
+
+    const response = await fetch(`${API_URL}/view-closet/delete`, {
+      method: 'DELETE',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        item_id: itemId,
+        user_id: userId,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Failed to delete clothing item');
+    }
+
+    return data;
   }
 
-  static normalizeCategory(rawCategory = '') {
-    const value = String(rawCategory || '').trim().toLowerCase();
-
-    if (
-      value === 'shirt' ||
-      value === 'top' ||
-      value === 't-shirt' ||
-      value === 'tshirt' ||
-      value === 'blouse'
-    ) {
-      return 'Shirt';
-    }
-
-    if (value === 'pants' || value === 'jeans' || value === 'trousers') {
-      return 'Pants';
-    }
-
-    if (value === 'dress') {
-      return 'Dress';
-    }
-
-    if (value === 'shorts' || value === 'skirt' || value === 'shorts/skirt') {
-      return 'Shorts/Skirt';
-    }
-
-    if (
-      value === 'jacket' ||
-      value === 'hoodie' ||
-      value === 'jacket/hoodie' ||
-      value === 'coat'
-    ) {
-      return 'Jacket/Hoodie';
-    }
-
-    if (value === 'shoe' || value === 'shoes' || value === 'footwear') {
-      return 'Shoes';
-    }
-
-    return rawCategory || 'Unknown';
-  }
-
-  static normalizeClothingItems(rawItems = []) {
-    if (!Array.isArray(rawItems)) {
+  /**
+   * Filters clothing items by type on the frontend
+   */
+  static filterByType(items = [], selectedType = 'All') {
+    if (!Array.isArray(items)) {
       return [];
     }
 
-    return rawItems.map((item, index) => ({
-      id: item.id ?? `closet-${index}-${Date.now()}`,
-      category: this.normalizeCategory(
-        item.type || item.category || item.clothing_type || 'Unknown'
-      ),
-      occasion: item.occasion || 'Casual',
-      uploadedAt: item.uploaded_at || item.uploadedAt || new Date().toISOString(),
-      userId: item.user_id || item.userId || null,
-      image: item.image || null,
-      image_mime: item.image_mime || 'image/jpeg',
-      image_filename: item.image_filename || '',
-    }));
+    if (!selectedType || String(selectedType).trim().toLowerCase() === 'all') {
+      return items;
+    }
+
+    const selected = String(selectedType).trim().toLowerCase();
+
+    return items.filter((item) => {
+      return String(item?.type || '').trim().toLowerCase() === selected;
+    });
   }
 
-  static async clearClosetCache() {
-    try {
-      await AsyncStorage.removeItem(CLOSET_ITEMS_KEY);
-    } catch (error) {
-      // ignore
-    }
-  }
-
-  static async loadClothingItems(userId) {
-    if (!API_URL || !userId) {
-      return [];
+  /**
+   * Converts image data into a URI React Native can display
+   */
+  static getPhotoUri(item) {
+    if (!item || typeof item !== 'object') {
+      return null;
     }
 
-    try {
-      const response = await fetch(`${API_URL}/photo-upload/user/${userId}`);
+    const raw =
+      item.photoUri ||
+      item.photo ||
+      item.image ||
+      item.image_text ||
+      item.photo_text ||
+      item.photo_base64 ||
+      item.image_base64 ||
+      null;
 
-      if (!response.ok) {
-        throw new Error(`Failed to load closet items: ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      const rawItems = Array.isArray(data)
-        ? data
-        : Array.isArray(data?.items)
-          ? data.items
-          : [];
-
-      const normalizedItems = this.normalizeClothingItems(rawItems);
-
-      await AsyncStorage.setItem(CLOSET_ITEMS_KEY, JSON.stringify(normalizedItems));
-
-      return normalizedItems;
-    } catch (error) {
-      console.log('loadClothingItems error:', error);
-      return [];
-    }
-  }
-
-  static async deleteClothingItem(itemId, clothingItems = []) {
-    const normalized = this.normalizeClothingItems(clothingItems);
-    const updated = normalized.filter((item) => String(item.id) !== String(itemId));
-
-    await AsyncStorage.setItem(CLOSET_ITEMS_KEY, JSON.stringify(updated));
-
-    if (API_URL) {
-      try {
-        await fetch(`${API_URL}/photo-upload/${itemId}`, {
-          method: 'DELETE',
-        });
-      } catch (error) {
-        // keep local state even if backend delete fails
-      }
+    if (!raw || typeof raw !== 'string') {
+      return null;
     }
 
-    return updated;
-  }
+    const cleaned = raw.trim();
 
-  static countByCategory(clothingItems = [], category = '') {
-    const target = String(category).trim().toLowerCase();
-
-    if (!target) {
-      return 0;
+    if (!cleaned) {
+      return null;
     }
 
-    return this.normalizeClothingItems(clothingItems).filter((item) => {
-      return String(item.category).trim().toLowerCase() === target;
-    }).length;
+    if (cleaned.startsWith('data:image')) {
+      return cleaned;
+    }
+
+    const mimeType = item.image_mime || 'image/jpeg';
+    return `data:${mimeType};base64,${cleaned}`;
   }
 }
 

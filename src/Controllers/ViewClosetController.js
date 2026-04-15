@@ -82,7 +82,9 @@ class ViewClosetController {
 
     return rawItems.map((item, index) => ({
       id: item.id ?? `closet-${index}-${Date.now()}`,
-      category: this.normalizeCategory(item.type || item.category || item.clothing_type || 'Unknown'),
+      category: this.normalizeCategory(
+        item.type || item.category || item.clothing_type || 'Unknown'
+      ),
       occasion: item.occasion || 'Casual',
       uploadedAt: item.uploaded_at || item.uploadedAt || new Date().toISOString(),
       userId: item.user_id || item.userId || null,
@@ -102,12 +104,7 @@ class ViewClosetController {
 
   static async loadClothingItems(userId) {
     if (!API_URL || !userId) {
-      try {
-        const localRaw = await AsyncStorage.getItem(CLOSET_ITEMS_KEY);
-        return this.normalizeClothingItems(localRaw ? JSON.parse(localRaw) : []);
-      } catch (error) {
-        return [];
-      }
+      return [];
     }
 
     try {
@@ -131,12 +128,8 @@ class ViewClosetController {
 
       return normalizedItems;
     } catch (error) {
-      try {
-        const localRaw = await AsyncStorage.getItem(CLOSET_ITEMS_KEY);
-        return this.normalizeClothingItems(localRaw ? JSON.parse(localRaw) : []);
-      } catch (localError) {
-        return [];
-      }
+      console.log('loadClothingItems error:', error);
+      return [];
     }
   }
 
@@ -152,7 +145,7 @@ class ViewClosetController {
           method: 'DELETE',
         });
       } catch (error) {
-        // keep local update even if backend delete fails
+        // keep local state even if backend delete fails
       }
     }
 

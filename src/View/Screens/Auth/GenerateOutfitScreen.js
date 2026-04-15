@@ -1,43 +1,50 @@
-import { useEffect, useState } from "react";
+// Import React hooks for state and side effects
+import { useState } from "react";
+
+// Import React Native components used in this screen
 import {
-    ActivityIndicator,
-    Alert,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  ActivityIndicator,
+  Alert,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from "react-native";
 
-const GenerateOutfitScreen = ({ navigation = null }) => {
-  const [step, setStep] = useState("selection"); // 'selection' | 'generating' | 'result'
+// Import Expo Router so the Back button can return to the previous screen
+import { router } from "expo-router";
+
+// Main screen component for outfit generation
+const GenerateOutfitScreen = () => {
+  // step controls which part of the screen is shown
+  // "selection" = user is choosing options
+  // "generating" = loading screen while outfit is being created
+  const [step, setStep] = useState("selection");
+
+  // Stores the selected occasion
   const [occasion, setOccasion] = useState("");
+
+  // Stores the selected time of day
   const [timeOfDay, setTimeOfDay] = useState("");
-  const [] = useState(null);
-  const [weather, setWeather] = useState({ temp: 72, condition: "sunny" });
 
-  useEffect(() => {
-    // Simulate weather API call
-    const conditions = ["sunny", "cloudy", "rainy"];
-    const randomCondition =
-      conditions[Math.floor(Math.random() * conditions.length)];
-    const randomTemp = Math.floor(Math.random() * 40) + 50; // 50-90°F
-    setWeather({ temp: randomTemp, condition: randomCondition });
-  }, []);
-
+  // Handles the Generate Outfit button
   const handleGenerate = async () => {
+    // Prevent the user from continuing if they did not choose both options
     if (!occasion || !timeOfDay) {
       Alert.alert(
         "Missing Information",
-        "Please select both occasion and time of day",
+        "Please select both occasion and time of day"
       );
       return;
     }
 
+    // Show the loading/generating view
     setStep("generating");
 
-    // TODO:  replace this with OutfitController.generateOutfit()
-    // For now, just show the generating screen
+    // Placeholder logic until the real controller is connected
+    // After 2.5 seconds it shows a message and returns to selection
     setTimeout(() => {
       Alert.alert(
         "Coming Soon!",
@@ -47,109 +54,125 @@ const GenerateOutfitScreen = ({ navigation = null }) => {
             text: "OK",
             onPress: () => setStep("selection"),
           },
-        ],
+        ]
       );
     }, 2500);
   };
 
-  const getWeatherIcon = () => {
-    if (weather.condition === "sunny") return "☀️";
-    if (weather.condition === "rainy") return "🌧️";
-    return "☁️";
+  // Converts text like "Business Casual" into "business-casual"
+  // This makes it easier to store a clean value in state
+  const formatOccasionValue = (value) => {
+    return value.toLowerCase().replace(/\s+/g, "-");
   };
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header */}
+      {/* Header section */}
       <View style={styles.header}>
         <View style={styles.headerLeft}>
+          {/* Back button returns to the previous screen */}
           <TouchableOpacity
-            onPress={() => Alert.alert("Back", "Navigate back to home")}
+            onPress={() => router.back()}
             style={styles.backButton}
           >
             <Text style={styles.backButtonText}>← Back</Text>
           </TouchableOpacity>
+
+          {/* Screen title */}
           <Text style={styles.headerTitle}>Generate Outfit</Text>
-        </View>
-        <View style={styles.weatherBadge}>
-          <Text style={styles.weatherIcon}>{getWeatherIcon()}</Text>
-          <Text style={styles.weatherText}>
-            {weather.temp}°F - {weather.condition}
-          </Text>
         </View>
       </View>
 
-      {/* Main Content */}
-      <ScrollView style={styles.content}>
+      {/* Main scrollable content */}
+      <ScrollView
+        style={styles.content}
+        contentContainerStyle={styles.contentContainer}
+      >
         <View style={styles.card}>
-          {/* Selection Step */}
+          {/* Selection screen shown before generating */}
           {step === "selection" && (
             <View>
+              {/* Top section of the card */}
               <View style={styles.cardHeader}>
                 <View style={styles.iconContainer}>
                   <Text style={styles.iconText}>✨</Text>
                 </View>
+
                 <Text style={styles.cardTitle}>Create Your Perfect Outfit</Text>
                 <Text style={styles.cardSubtitle}>
                   Tell us about your event
                 </Text>
               </View>
 
+              {/* Form area where the user makes selections */}
               <View style={styles.formSection}>
+                {/* Occasion label */}
                 <Text style={styles.sectionLabel}>Type of Occasion</Text>
+
+                {/* Occasion buttons */}
                 <View style={styles.buttonGrid3}>
-                  {["Casual", "Business Casual", "Formal"].map((occ) => (
-                    <TouchableOpacity
-                      key={occ}
-                      onPress={() =>
-                        setOccasion(occ.toLowerCase().replace(" ", "-"))
-                      }
-                      style={[
-                        styles.optionButton,
-                        occasion === occ.toLowerCase().replace(" ", "-") &&
-                          styles.optionButtonSelected,
-                      ]}
-                    >
-                      <Text
+                  {["Casual", "Business Casual", "Formal"].map((occ) => {
+                    const value = formatOccasionValue(occ);
+
+                    return (
+                      <TouchableOpacity
+                        key={occ}
+                        onPress={() => setOccasion(value)}
                         style={[
-                          styles.optionButtonText,
-                          occasion === occ.toLowerCase().replace(" ", "-") &&
-                            styles.optionButtonTextSelected,
+                          styles.optionButton,
+                          styles.optionButtonThird,
+                          occasion === value && styles.optionButtonSelected,
                         ]}
                       >
-                        {occ}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        <Text
+                          style={[
+                            styles.optionButtonText,
+                            occasion === value &&
+                              styles.optionButtonTextSelected,
+                          ]}
+                        >
+                          {occ}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
 
+                {/* Time of day label */}
                 <Text style={[styles.sectionLabel, { marginTop: 24 }]}>
                   Time of Day
                 </Text>
+
+                {/* Time of day buttons */}
                 <View style={styles.buttonGrid2}>
-                  {["Morning", "Noon", "Afternoon", "Evening"].map((time) => (
-                    <TouchableOpacity
-                      key={time}
-                      onPress={() => setTimeOfDay(time.toLowerCase())}
-                      style={[
-                        styles.optionButton,
-                        timeOfDay === time.toLowerCase() &&
-                          styles.optionButtonSelected,
-                      ]}
-                    >
-                      <Text
+                  {["Morning", "Noon", "Afternoon", "Evening"].map((time) => {
+                    const value = time.toLowerCase();
+
+                    return (
+                      <TouchableOpacity
+                        key={time}
+                        onPress={() => setTimeOfDay(value)}
                         style={[
-                          styles.optionButtonText,
-                          timeOfDay === time.toLowerCase() &&
-                            styles.optionButtonTextSelected,
+                          styles.optionButton,
+                          styles.optionButtonHalf,
+                          timeOfDay === value && styles.optionButtonSelected,
                         ]}
                       >
-                        {time}
-                      </Text>
-                    </TouchableOpacity>
-                  ))}
+                        <Text
+                          style={[
+                            styles.optionButtonText,
+                            timeOfDay === value &&
+                              styles.optionButtonTextSelected,
+                          ]}
+                        >
+                          {time}
+                        </Text>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
 
+                {/* Generate button becomes disabled until both fields are chosen */}
                 <TouchableOpacity
                   onPress={handleGenerate}
                   disabled={!occasion || !timeOfDay}
@@ -166,28 +189,33 @@ const GenerateOutfitScreen = ({ navigation = null }) => {
             </View>
           )}
 
-          {/* Generating Step */}
+          {/* Loading screen shown while "generating" */}
           {step === "generating" && (
             <View style={styles.generatingContainer}>
+              {/* Spinner animation */}
               <ActivityIndicator
                 size="large"
                 color="#42A5F5"
-                style={{ marginBottom: 24 }}
+                style={styles.loader}
               />
+
+              {/* Main loading text */}
               <Text style={styles.generatingTitle}>
                 Generating Your Outfit...
               </Text>
+
+              {/* Smaller subtitle */}
               <Text style={styles.generatingSubtitle}>
                 Our AI is selecting the perfect combination
               </Text>
+
+              {/* Fake progress checklist */}
               <View style={styles.statusList}>
                 <Text style={styles.statusItem}>✓ Analyzing your closet</Text>
                 <Text style={styles.statusItem}>
-                  ✓ Considering weather conditions
-                </Text>
-                <Text style={styles.statusItem}>
                   ✓ Matching colors and styles
                 </Text>
+                <Text style={styles.statusItem}>✓ Building your outfit</Text>
               </View>
             </View>
           )}
@@ -197,11 +225,15 @@ const GenerateOutfitScreen = ({ navigation = null }) => {
   );
 };
 
+// Styles for the screen
 const styles = StyleSheet.create({
+  // Main background container
   container: {
     flex: 1,
     backgroundColor: "#E3F2FD",
   },
+
+  // Top header bar
   header: {
     backgroundColor: "#fff",
     paddingHorizontal: 16,
@@ -215,43 +247,45 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
+
+  // Left side of header containing back button and title
   headerLeft: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 16,
+    flexWrap: "wrap",
   },
+
+  // Back button spacing
   backButton: {
-    padding: 4,
+    paddingVertical: 4,
+    paddingRight: 12,
+    marginRight: 8,
   },
+
+  // Back button text styling
   backButtonText: {
     color: "#666",
     fontSize: 16,
   },
+
+  // Header title styling
   headerTitle: {
     fontSize: 20,
     fontWeight: "bold",
     color: "#333",
   },
-  weatherBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#E3F2FD",
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
-    gap: 8,
-  },
-  weatherIcon: {
-    fontSize: 18,
-  },
-  weatherText: {
-    fontSize: 12,
-    color: "#666",
-  },
+
+  // ScrollView styling
   content: {
     flex: 1,
+  },
+
+  // Padding for scroll content
+  contentContainer: {
     padding: 16,
   },
+
+  // Main white card
   card: {
     backgroundColor: "#fff",
     borderRadius: 24,
@@ -262,10 +296,14 @@ const styles = StyleSheet.create({
     shadowRadius: 12,
     elevation: 8,
   },
+
+  // Top card content alignment
   cardHeader: {
     alignItems: "center",
     marginBottom: 32,
   },
+
+  // Blue circle icon background
   iconContainer: {
     width: 80,
     height: 80,
@@ -275,58 +313,99 @@ const styles = StyleSheet.create({
     alignItems: "center",
     marginBottom: 16,
   },
+
+  // Sparkle icon style
   iconText: {
     fontSize: 40,
   },
+
+  // Main card title
   cardTitle: {
     fontSize: 24,
     fontWeight: "bold",
     color: "#333",
     marginBottom: 8,
+    textAlign: "center",
   },
+
+  // Smaller card subtitle
   cardSubtitle: {
     fontSize: 16,
     color: "#666",
+    textAlign: "center",
   },
+
+  // Form layout spacing
   formSection: {
     gap: 16,
   },
+
+  // Section labels
   sectionLabel: {
     fontSize: 14,
     color: "#666",
     marginBottom: 12,
   },
+
+  // Occasion row
   buttonGrid3: {
     flexDirection: "row",
+    flexWrap: "wrap",
+    justifyContent: "space-between",
     gap: 12,
   },
+
+  // Time row
   buttonGrid2: {
     flexDirection: "row",
     flexWrap: "wrap",
+    justifyContent: "space-between",
     gap: 12,
   },
+
+  // Base style for selection buttons
   optionButton: {
-    flex: 1,
     paddingVertical: 12,
     paddingHorizontal: 16,
     borderRadius: 8,
     borderWidth: 2,
     borderColor: "#ddd",
     alignItems: "center",
-    minWidth: "45%",
+    justifyContent: "center",
   },
+
+  // One-third width button for occasion row
+  optionButtonThird: {
+    width: "31%",
+    minWidth: 180,
+  },
+
+  // Half width button for time row
+  optionButtonHalf: {
+    width: "48%",
+    minWidth: 220,
+  },
+
+  // Style added when an option is selected
   optionButtonSelected: {
     borderColor: "#42A5F5",
     backgroundColor: "#E3F2FD",
   },
+
+  // Button text
   optionButtonText: {
     fontSize: 14,
     color: "#333",
+    textAlign: "center",
   },
+
+  // Selected button text
   optionButtonTextSelected: {
     color: "#1976D2",
     fontWeight: "600",
   },
+
+  // Main generate button
   generateButton: {
     backgroundColor: "#42A5F5",
     paddingVertical: 16,
@@ -339,37 +418,60 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 4,
   },
+
+  // Disabled state for generate button
   generateButtonDisabled: {
     backgroundColor: "#ccc",
     shadowOpacity: 0,
   },
+
+  // Generate button text
   generateButtonText: {
     color: "#fff",
     fontSize: 18,
     fontWeight: "bold",
   },
+
+  // Layout for loading screen
   generatingContainer: {
     paddingVertical: 48,
     alignItems: "center",
   },
+
+  // Extra space under loading spinner
+  loader: {
+    marginBottom: 24,
+  },
+
+  // Loading title
   generatingTitle: {
     fontSize: 24,
     fontWeight: "bold",
     color: "#333",
     marginBottom: 8,
+    textAlign: "center",
   },
+
+  // Loading subtitle
   generatingSubtitle: {
     fontSize: 16,
     color: "#666",
     marginBottom: 32,
+    textAlign: "center",
   },
+
+  // List of status messages
   statusList: {
     gap: 8,
   },
+
+  // Single status line
   statusItem: {
     fontSize: 14,
     color: "#999",
+    textAlign: "center",
   },
 });
 
+// Export the screen so it can be used by the app
 export default GenerateOutfitScreen;

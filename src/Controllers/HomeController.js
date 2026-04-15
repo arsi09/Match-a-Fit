@@ -7,7 +7,7 @@ const USER_DATA_KEY = 'userData';
 const NAVIGATION_ROUTES = {
   uploadPhoto: '/PhotoUpload',
   viewCloset: '/ViewCloset',
-  generateOutfit: '/GenerateOutfit',
+  generateOutfit: '/OutfitGeneration',
   outfitLibrary: '/OutfitLibrary',
   profile: '/Profile',
 };

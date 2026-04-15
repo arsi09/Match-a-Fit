@@ -1,15 +1,13 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
 
-// Backend URL from Expo environment configuration.
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
-// Shared local-storage keys used in this app.
 const CURRENT_USER_KEY = 'matchafit_currentUser';
 const USER_DATA_KEY = 'userData';
 const CLOSET_ITEMS_KEY = 'matchafit_closetItems';
 
 class ViewClosetController {
-  // Reads current user from local storage using the same fallback pattern as other controllers.
   static async getCurrentUser() {
     try {
       const currentUserRaw = await AsyncStorage.getItem(CURRENT_USER_KEY);
@@ -28,7 +26,55 @@ class ViewClosetController {
     }
   }
 
-  // Normalizes clothing item shape so the screen can safely render category/color/date fields.
+  static redirectToLogin() {
+    router.replace('/LoginScreen');
+  }
+
+  static goBack() {
+    router.back();
+  }
+
+  static normalizeCategory(rawCategory = '') {
+    const value = String(rawCategory || '').trim().toLowerCase();
+
+    if (
+      value === 'shirt' ||
+      value === 'top' ||
+      value === 't-shirt' ||
+      value === 'tshirt' ||
+      value === 'blouse'
+    ) {
+      return 'Shirt';
+    }
+
+    if (value === 'pants' || value === 'jeans' || value === 'trousers') {
+      return 'Pants';
+    }
+
+    if (value === 'dress') {
+      return 'Dress';
+    }
+
+    if (value === 'shorts' || value === 'skirt' || value === 'shorts/skirt') {
+      return 'Shorts/Skirt';
+    }
+
+    if (
+      value === 'jacket' ||
+      value === 'hoodie' ||
+      value === 'jacket/hoodie' ||
+      value === 'coat'
+    ) {
+      return 'Jacket/Hoodie';
+    }
+
+    if (value === 'shoe' || value === 'shoes' || value === 'footwear') {
+      return 'Shoes';
+    }
+
+    return rawCategory || 'Unknown';
+  }
+
   static normalizeClothingItems(rawItems = []) {
     if (!Array.isArray(rawItems)) {
       return [];
@@ -36,46 +82,65 @@ class ViewClosetController {
 
     return rawItems.map((item, index) => ({
       id: item.id ?? `closet-${index}-${Date.now()}`,
-      category: item.category || item.clothing_type || item.type || 'Unknown',
-      color: item.color || '#93c5fd',
+      category: this.normalizeCategory(item.type || item.category || item.clothing_type || 'Unknown'),
       occasion: item.occasion || 'Casual',
-      uploadedAt: item.uploadedAt || item.uploaded_at || new Date().toISOString(),
-      userId: item.userId || item.user_id || null,
+      uploadedAt: item.uploaded_at || item.uploadedAt || new Date().toISOString(),
+      userId: item.user_id || item.userId || null,
+      image: item.image || null,
+      image_mime: item.image_mime || 'image/jpeg',
+      image_filename: item.image_filename || '',
     }));
   }
 
-  // Loads clothing items from backend when available, otherwise returns local cached items.
-  static async loadClothingItems(userId) {
-    let localItems = [];
-
+  static async clearClosetCache() {
     try {
-      const localRaw = await AsyncStorage.getItem(CLOSET_ITEMS_KEY);
-      localItems = this.normalizeClothingItems(localRaw ? JSON.parse(localRaw) : []);
+      await AsyncStorage.removeItem(CLOSET_ITEMS_KEY);
     } catch (error) {
-      localItems = [];
+      // ignore
     }
+  }
 
+  static async loadClothingItems(userId) {
     if (!API_URL || !userId) {
-      return localItems;
+      try {
+        const localRaw = await AsyncStorage.getItem(CLOSET_ITEMS_KEY);
+        return this.normalizeClothingItems(localRaw ? JSON.parse(localRaw) : []);
+      } catch (error) {
+        return [];
+      }
     }
 
     try {
       const response = await fetch(`${API_URL}/photo-upload/user/${userId}`);
+
+      if (!response.ok) {
+        throw new Error(`Failed to load closet items: ${response.status}`);
+      }
+
       const data = await response.json();
 
-      const apiItems = this.normalizeClothingItems(
-        Array.isArray(data) ? data : (Array.isArray(data?.items) ? data.items : [])
-      );
+      const rawItems = Array.isArray(data)
+        ? data
+        : Array.isArray(data?.items)
+          ? data.items
+          : [];
 
-      await AsyncStorage.setItem(CLOSET_ITEMS_KEY, JSON.stringify(apiItems));
-      return apiItems;
+      const normalizedItems = this.normalizeClothingItems(rawItems);
+
+      await AsyncStorage.setItem(CLOSET_ITEMS_KEY, JSON.stringify(normalizedItems));
+
+      return normalizedItems;
     } catch (error) {
-      return localItems;
+      try {
+        const localRaw = await AsyncStorage.getItem(CLOSET_ITEMS_KEY);
+        return this.normalizeClothingItems(localRaw ? JSON.parse(localRaw) : []);
+      } catch (localError) {
+        return [];
+      }
     }
   }
 
-  // Deletes an item locally first for immediate UI update, then attempts backend delete.
-  static async deleteClothingItem(itemId, clothingItems = [], user = null) {
+  static async deleteClothingItem(itemId, clothingItems = []) {
     const normalized = this.normalizeClothingItems(clothingItems);
     const updated = normalized.filter((item) => String(item.id) !== String(itemId));
 
@@ -87,16 +152,16 @@ class ViewClosetController {
           method: 'DELETE',
         });
       } catch (error) {
-        // Keep local state as source of truth when delete API is unavailable.
+        // keep local update even if backend delete fails
       }
     }
 
     return updated;
   }
 
-  // Counts items in one category (case-insensitive) for the category badges.
   static countByCategory(clothingItems = [], category = '') {
     const target = String(category).trim().toLowerCase();
+
     if (!target) {
       return 0;
     }

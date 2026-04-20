@@ -35,6 +35,8 @@ from Routes.outfit_library_route import router as outfit_library_router
 #Import the view closet router
 from Routes.view_closet_route import router as view_closet_router
 
+#Import the outfit AI router
+from Routes.outfit_ai_route import router as outfit_ai_router
 
 # Create the FastAPI app
 app = FastAPI()
@@ -131,3 +133,6 @@ app.include_router(outfit_library_router)
 
 # Add all view closet routes to the app
 app.include_router(view_closet_router)
+
+# Add all outfit AI routes to the app
+app.include_router(outfit_ai_router)

@@ -23,55 +23,62 @@ import {
 } from 'react-native';
 import PhotoUploadController from '../../../Controllers/PhotoUploadController';
 
-//Clothing categories and occasions for user selection
-const CATEGORIES = ['Shirt', 'Pants', 'Dress', 'Shorts/Skirt','Jacket/Hoodie'];
+// Clothing categories and occasions for user selection
+const CATEGORIES = [
+    'Shirt',
+    'Pants',
+    'Dress',
+    'Shorts/Skirt',
+    'Jacket/Hoodie',
+    'Shoes'
+];
+
 const OCCASIONS = ['Formal', 'Business Casual', 'Casual'];
 
-//Reusable component for selecting category and occasion options
-const OptionSelector = ({label, options, selected, onSelect}) => (
-    <View style = {styles.selectorContainer}>
-
-        <Text style = {styles.label}>{label}</Text>
-        <View style = {styles.optionsRow}>
+// Reusable component for selecting category and occasion options
+const OptionSelector = ({ label, options, selected, onSelect }) => (
+    <View style={styles.selectorContainer}>
+        <Text style={styles.label}>{label}</Text>
+        <View style={styles.optionsRow}>
             {options.map((option) => (
                 <TouchableOpacity
-                key = {option}
-                style = {[
-                    styles.optionChip,
-                    selected === option && styles.optionChipSelected,             
-                ]}
-                onPress={() => onSelect(option)}
-            >
-                <Text
+                    key={option}
                     style={[
-                        styles.optionChipText,
-                        selected === option && styles.optionChipTextSelected,
+                        styles.optionChip,
+                        selected === option && styles.optionChipSelected,
                     ]}
+                    onPress={() => onSelect(option)}
                 >
-                    {option}
-                </Text>
-            </TouchableOpacity>
-        ))}
+                    <Text
+                        style={[
+                            styles.optionChipText,
+                            selected === option && styles.optionChipTextSelected,
+                        ]}
+                    >
+                        {option}
+                    </Text>
+                </TouchableOpacity>
+            ))}
+        </View>
     </View>
-</View> 
 );
 
-//Main screen component for photo upload flow
+// Main screen component for photo upload flow
 const PhotoUploadScreen = () => {
     const [step, setStep] = useState('instructions'); // 'instructions' | 'confirm' | 'details'
-    
     const [photoUri, setPhotoUri] = useState(null);
 
-    //state for category and occasion selections
+    // State for category and occasion selections
     const [category, setCategory] = useState('');
     const [occasion, setOccasion] = useState('');
 
-    //loading state for save operation
+    // Loading state for save operation
     const [saving, setSaving] = useState(false);
 
-    //Calls controller to handle permissions and launch camera/library, then moves to confirm step if successful
+    // Calls controller to handle permissions and launch camera/library,
+    // then moves to confirm step if successful
     const handleTakePhoto = async () => {
-        try { //request permissions and launch camera
+        try {
             const uri = await PhotoUploadController.takePhoto();
             if (uri) {
                 setPhotoUri(uri);
@@ -83,7 +90,7 @@ const PhotoUploadScreen = () => {
     };
 
     const handleUploadFromLibrary = async () => {
-        try { //request permissions and launch image library
+        try {
             const uri = await PhotoUploadController.pickFromLibrary();
             if (uri) {
                 setPhotoUri(uri);
@@ -94,13 +101,13 @@ const PhotoUploadScreen = () => {
         }
     };
 
-    //Resets photo and goes back to instructions step
+    // Resets photo and goes back to instructions step
     const handleRetake = async () => {
         setPhotoUri(null);
         setStep('instructions');
     };
 
-    //Called when users save item to closet, turns over all logic to controller which handles token retrieval and API calls - shows loading indicator while saving and alerts on success or error
+    // Called when user saves item to closet
     const handleSave = async () => {
         setSaving(true);
         try {
@@ -115,129 +122,133 @@ const PhotoUploadScreen = () => {
         }
     };
 
-//Return the three main steps of the photo upload flow - instructions with photo options, confirm photo preview, and select details with save button - all wrapped in a scroll view with keyboard handling and a back button to return to home screen
-return (
-    <KeyboardAvoidingView
-        style={styles.container}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-        <ScrollView
-            contentContainerStyle={styles.scrollContent}
-            keyboardShouldPersistTaps="handled"
+    return (
+        <KeyboardAvoidingView
+            style={styles.container}
+            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
         >
-            {/*Back button to return to home screen*/}
-            <TouchableOpacity style={styles.backButton} onPress={() => router.push('/Home')}>
-                <Text style={styles.backButtonText}>← Back</Text>
-            </TouchableOpacity>
+            <ScrollView
+                contentContainerStyle={styles.scrollContent}
+                keyboardShouldPersistTaps="handled"
+            >
+                {/* Back button to return to home screen */}
+                <TouchableOpacity style={styles.backButton} onPress={() => router.push('/Home')}>
+                    <Text style={styles.backButtonText}>← Back</Text>
+                </TouchableOpacity>
 
-            <View style={styles.card}>
-                {/*SHows instructions/tips and photo upload options*/}
-                {step === 'instructions' && (
-                    <View style={styles.stepContainer}>
-                        <View style = {styles.iconCircle}>
-                            <Text style = {styles.iconText}>👕</Text>
-                        </View> 
+                <View style={styles.card}>
+                    {/* Shows instructions/tips and photo upload options */}
+                    {step === 'instructions' && (
+                        <View style={styles.stepContainer}>
+                            <View style={styles.iconCircle}>
+                                <Text style={styles.iconText}>👕</Text>
+                            </View>
 
-                        <Text style={styles.title}>Upload a Clothing Item</Text>
+                            <Text style={styles.title}>Upload a Clothing Item</Text>
 
-                        {/*Tip box that will be visible on the first step to help users take better photos of their clothing items*/}
-                        <View style={styles.tipsBox}>
-                            <Text style={styles.tipsTitle}>Tips for a Great Photo:</Text>
-                            <Text style={styles.tipItem}>- Use good lighting (natural light is best)</Text>
-                            <Text style={styles.tipItem}>- Capture the entire item in the frame</Text>
-                            <Text style={styles.tipItem}>- Use a plain background if possible</Text>
+                            {/* Tip box visible on the first step */}
+                            <View style={styles.tipsBox}>
+                                <Text style={styles.tipsTitle}>Tips for a Great Photo:</Text>
+                                <Text style={styles.tipItem}>- Use good lighting (natural light is best)</Text>
+                                <Text style={styles.tipItem}>- Capture the entire item in the frame</Text>
+                                <Text style={styles.tipItem}>- Use a plain background if possible</Text>
+                            </View>
+
+                            {/* Two buttons for taking photo or uploading from library */}
+                            <View style={styles.photoButtonRow}>
+                                <TouchableOpacity style={styles.photoButton} onPress={handleTakePhoto}>
+                                    <Text style={styles.photoButtonText}>Take Photo</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={[styles.photoButton, styles.photoButtonSecondary]}
+                                    onPress={handleUploadFromLibrary}
+                                >
+                                    <Text style={styles.photoButtonText}>Upload from Library</Text>
+                                </TouchableOpacity>
+                            </View>
                         </View>
+                    )}
 
-                        {/*Two buttons for taking photo or uploading from library, which call respective handlers to launch camera or image picker*/}
-                        <View style={styles.photoButtonRow}>
-                            <TouchableOpacity style={styles.photoButton} onPress={handleTakePhoto}>
-                                <Text style={styles.photoButtonText}>Take Photo</Text>
-                            </TouchableOpacity>
+                    {/* Shows photo preview and options to retake or confirm photo */}
+                    {step === 'confirm' && (
+                        <View style={styles.stepContainer}>
+                            <Text style={styles.title}>Confirm Your Photo</Text>
 
-                            <TouchableOpacity 
-                            style={[styles.photoButton, styles.photoButtonSecondary]}
-                            onPress={handleUploadFromLibrary}
-                            >   
-                                <Text style={styles.photoButtonText}>Upload from Library</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                )}
-
-                {/*Shows photo preview and options to retake or confirm photo*/}
-                {step === 'confirm' && (
-                    <View style={styles.stepContainer}>
-                        <Text style={styles.title}>Confirm Your Photo</Text>
-                        {/*Shows photo preview*/}
-                        {photoUri && ( 
-                            <Image
-                                source={{ uri: photoUri }}
-                                style={styles.photoPreview}
-                                resizeMode="cover"
-                            />
-                        )}
-
-                        <View style={styles.confirmButtonsRow}>
-                            <TouchableOpacity style={styles.retakeButton} onPress={handleRetake}>
-                                <Text style={styles.retakeButtonText}>Retake?</Text>
-                            </TouchableOpacity>
-                            <TouchableOpacity style={styles.confirmButton} onPress={() => setStep('details')}>
-                                <Text style={styles.confirmButtonText}>Looks Good!</Text>
-                            </TouchableOpacity>
-                        </View>
-                    </View>
-                )}
-                {/*User selects category and occasion details for the item, then saves to closet - shows loading indicator while saving*/}
-                {step === 'details' && (
-                    <View style={styles.stepContainer}>
-                        <Text style={styles.title}>Clothing Details</Text>
-
-                        {photoUri && (
-                            <Image
-                                source={{ uri: photoUri }}
-                                style={styles.photoThumbnail}
-                                resizeMode="cover"
-                            />
-                        )}
-
-                        <OptionSelector
-                            label="Category"
-                            options={CATEGORIES}
-                            selected={category}
-                            onSelect={setCategory}
-                        />
-                        <OptionSelector
-                            label="Occasion"
-                            options={OCCASIONS}
-                            selected={occasion}
-                            onSelect={setOccasion}
-                        />
-
-                        {/*Save button is disabled until both category and occasion are selected*/}
-                        <TouchableOpacity 
-                            style={[
-                                styles.saveButton,
-                                (!category || !occasion) && styles.saveButtonDisabled,
-                            ]}
-                            onPress={handleSave}
-                            disabled={!category || !occasion || saving}
-                        >
-                            {saving ? (
-                                <ActivityIndicator color="#fff" />
-                            ) : (
-                                <Text style={styles.saveButtonText}>Save to Closet 👗</Text>
+                            {photoUri && (
+                                <Image
+                                    source={{ uri: photoUri }}
+                                    style={styles.photoPreview}
+                                    resizeMode="cover"
+                                />
                             )}
-                        </TouchableOpacity>
-                    </View>
-                  )}
 
-             </View>
-         </ScrollView>
-    </KeyboardAvoidingView>
+                            <View style={styles.confirmButtonsRow}>
+                                <TouchableOpacity style={styles.retakeButton} onPress={handleRetake}>
+                                    <Text style={styles.retakeButtonText}>Retake?</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                    style={styles.confirmButton}
+                                    onPress={() => setStep('details')}
+                                >
+                                    <Text style={styles.confirmButtonText}>Looks Good!</Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
+                    )}
+
+                    {/* User selects category and occasion details for the item */}
+                    {step === 'details' && (
+                        <View style={styles.stepContainer}>
+                            <Text style={styles.title}>Clothing Details</Text>
+
+                            {photoUri && (
+                                <Image
+                                    source={{ uri: photoUri }}
+                                    style={styles.photoThumbnail}
+                                    resizeMode="cover"
+                                />
+                            )}
+
+                            <OptionSelector
+                                label="Category"
+                                options={CATEGORIES}
+                                selected={category}
+                                onSelect={setCategory}
+                            />
+
+                            <OptionSelector
+                                label="Occasion"
+                                options={OCCASIONS}
+                                selected={occasion}
+                                onSelect={setOccasion}
+                            />
+
+                            {/* Save button is disabled until both category and occasion are selected */}
+                            <TouchableOpacity
+                                style={[
+                                    styles.saveButton,
+                                    (!category || !occasion) && styles.saveButtonDisabled,
+                                ]}
+                                onPress={handleSave}
+                                disabled={!category || !occasion || saving}
+                            >
+                                {saving ? (
+                                    <ActivityIndicator color="#fff" />
+                                ) : (
+                                    <Text style={styles.saveButtonText}>Save to Closet 👗</Text>
+                                )}
+                            </TouchableOpacity>
+                        </View>
+                    )}
+                </View>
+            </ScrollView>
+        </KeyboardAvoidingView>
     );
 };
 
-//Styles used for screen layout and components - clean and modern design with focus on usability
+// Styles used for screen layout and components
 const styles = StyleSheet.create({
     container: {
         flex: 1,
@@ -269,7 +280,7 @@ const styles = StyleSheet.create({
         width: '100%',
         maxWidth: 420,
         shadowColor: '#000',
-        shadowOffset: {width: 0, height: 8},
+        shadowOffset: { width: 0, height: 8 },
         shadowOpacity: 0.12,
         shadowRadius: 24,
         elevation: 8,

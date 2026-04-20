@@ -1,23 +1,22 @@
 """
 ai_connection.py
-made by: Pedro Jacobo
-revised by Gemini 04/14/2026
-updated to google.genai 3.1
+
 Purpose:
 - Connect to the Gemini API
 - Send clothing images + metadata to Gemini
-- Return outfit suggestions to the service layer with weather awareness
+- Return outfit suggestions to the service layer
 """
 
 import os
+from pathlib import Path
+
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
-from pathlib import Path
+
 
 # Load values from .env
 try:
-    # Walk up directories until .env is found (handles any nesting depth)
     env_path = Path(__file__).resolve().parent
     while env_path != env_path.parent:
         candidate = env_path / ".env"
@@ -32,85 +31,63 @@ except Exception:
 class GeminiClient:
     """
     Gemini client for Match-a-Fit.
+
+    This class is responsible for:
+    - configuring the Gemini client
+    - preparing the multimodal request
+    - sending prompt + images to Gemini
+    - returning the result
     """
 
     def __init__(self):
         api_key = os.getenv("GEMINI_API_KEY")
+
         if not api_key:
             raise ValueError("GEMINI_API_KEY was not found in the environment.")
 
-        # Initialize the new Google GenAI Client
         self.client = genai.Client(api_key=api_key)
-        
-        # Using Gemini 3.1 Flash for best-in-class image reasoning
-        self.model_name = "gemini-3.1-flash"
 
-    def build_prompt(self, clothing_items, occasion=None, weather=None):
+        # Use a valid Gemini model name
+        self.model_name = "gemini-2.0-flash"
+
+    def generate_outfits(self, clothing_items, prompt):
         """
-        Build the text instructions sent to Gemini.
-        """
-        prompt = (
-            "You are a professional fashion assistant for Match-a-Fit. "
-            "Analyze the provided clothing images and metadata to create a cohesive outfit. "
-            "Rule 1: Use ONLY the provided items. "
-            "Rule 2: You must pair at least one top and one bottom. "
-        )
-
-        if occasion:
-            prompt += f"Target Occasion: {occasion}. "
-        
-        if weather:
-            prompt += f"Current Weather: {weather}. Ensure the outfit is functionally appropriate. "
-
-        prompt += (
-            "\nOutput Requirements:\n"
-            "Return a JSON array of objects. Each object must include:\n"
-            "- 'outfit_name': A creative name for the look.\n"
-            "- 'item_ids': An array of integers corresponding to the IDs provided.\n"
-            "- 'explanation': Why these items work together for the occasion/weather.\n"
-        )
-
-        prompt += "\nInventory List:\n"
-        for item in clothing_items:
-            prompt += (
-                f"- ID: {item['id']}, "
-                f"Type: {item.get('clothing_type', 'Unknown')}, "
-                f"Occasion: {item.get('occasion', 'Unknown')}\n"
-            )
-
-        return prompt
-
-    def generate_outfits(self, clothing_items, occasion=None, weather=None):
-        """
-        Send clothing items to Gemini and return structured outfit suggestions.
+        Sends clothing image bytes and a pre-built prompt to Gemini.
         """
         if not clothing_items:
-            return {"success": False, "error": "No clothing items provided."}
-
-        prompt = self.build_prompt(clothing_items, occasion, weather)
-        
-        # Multimodal content list: Starts with the text prompt
-        contents = [prompt]
-
-        # Add image parts from the bitstrings
-        for item in clothing_items:
-            image_bytes = item.get("image_bytes")
-            if image_bytes:
-                contents.append(
-                    types.Part.from_bytes(
-                        data=image_bytes,
-                        mime_type=item.get("image_mime", "image/jpeg")
-                    )
-                )
+            return {
+                "success": False,
+                "error": "No clothing items provided."
+            }
 
         try:
-            # Generate content with JSON enforcement
+            # Start the multimodal contents with the text prompt
+            contents = [prompt]
+
+            # Add each clothing image as a Gemini Part
+            for item in clothing_items:
+                image_bytes = item.get("image_bytes")
+
+                if not image_bytes:
+                    continue
+
+                try:
+                    contents.append(
+                        types.Part.from_bytes(
+                            data=image_bytes,
+                            mime_type=item.get("image_mime", "image/jpeg")
+                        )
+                    )
+                except Exception as image_error:
+                    print(f"Error preparing image ID {item.get('id')}: {image_error}")
+                    continue
+
             response = self.client.models.generate_content(
                 model=self.model_name,
                 contents=contents,
                 config=types.GenerateContentConfig(
                     response_mime_type="application/json",
-                    temperature=0.7 # Slight creativity for fashion advice
+                    temperature=0.7
                 )
             )
 
@@ -121,4 +98,7 @@ class GeminiClient:
             }
 
         except Exception as e:
-            return {"success": False, "error": str(e)}
+            return {
+                "success": False,
+                "error": str(e)
+            }

@@ -12,6 +12,10 @@ from Models.SignUpModel import SignUpModel
 
 
 def login_user(email: str, password: str):
+    print("=== LOGIN DEBUG ===")
+    print("Email:", email)
+    print("Password:", password)
+
     if not email or not password:
         return {
             "success": False,
@@ -19,6 +23,8 @@ def login_user(email: str, password: str):
         }
 
     user = LogInModel.authenticate(email, password)
+
+    print("User returned:", user)
 
     if not user:
         return {
@@ -30,7 +36,6 @@ def login_user(email: str, password: str):
         "success": True,
         "user": user
     }
-
 
 def sign_up_user(
     first_name: str,

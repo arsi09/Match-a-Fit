@@ -53,6 +53,7 @@ except Exception:
 DEFAULT_SUPABASE_URL = os.getenv("SUPABASE_URL").strip() 
 DEFAULT_SUPABASE_KEY = os.getenv("SUPABASE_KEY").strip() 
 
+#print("SUPABASE_KEY exists:", bool(DEFAULT_SUPABASE_KEY))
 
 # ------------------------------------------------------------
 # Validation Function

@@ -18,9 +18,10 @@ import os                     # Used for reading environment variables
 import threading              # Used to make client initialization thread-safe
 import psycopg2               # Used for raw PostgreSQL connections (BYTEA support)
 from typing import Tuple, Any, Optional  # Type hints
-
+from dotenv import load_dotenv
 # Supabase Python SDK
 from supabase import create_client, Client
+
 
 
 # ------------------------------------------------------------

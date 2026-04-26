@@ -15,12 +15,6 @@ class LogInModel:
 
     def verify_password(self, password: str) -> bool:
         hashed = hashlib.sha256((password + self.salt).encode("utf-8")).hexdigest()
-        print("=== PASSWORD DEBUG ===")
-        print("Entered password:", password)
-        print("Salt from DB:", self.salt)
-        print("Stored password_hash:", self.password_hash)
-        print("Computed password_hash:", hashed)
-        print("Password match:", hashed == self.password_hash)
         return hashed == self.password_hash
 
     def to_safe_dict(self) -> dict:
@@ -36,8 +30,8 @@ class LogInModel:
 
         try:
             normalized_email = email.strip().lower()
-            print("=== FIND BY EMAIL DEBUG ===")
-            print("Email being searched:", normalized_email)
+            #print("=== FIND BY EMAIL DEBUG ===")
+            #print("Email being searched:", normalized_email)
 
             res = (
                 client.table("users")
@@ -48,14 +42,14 @@ class LogInModel:
             )
 
             data = getattr(res, "data", None)
-            print("Raw DB data:", data)
+            #print("Raw DB data:", data)
 
             if not data:
-                print("No user found in DB")
+                #print("No user found in DB")
                 return None
 
             row = data[0]
-            print("Row found:", row)
+            #print("Row found:", row)
 
             return cls(
                 id=row.get("id"),
@@ -66,21 +60,21 @@ class LogInModel:
                 salt=row.get("salt"),
             )
         except Exception as e:
-            print("find_by_email exception:", str(e))
+            #print("find_by_email exception:", str(e))
             return None
 
     @classmethod
     def authenticate(cls, email: str, password: str) -> Optional[dict]:
-        print("=== AUTHENTICATE DEBUG ===")
+        #print("=== AUTHENTICATE DEBUG ===")
         user = cls.find_by_email(email)
 
         if not user:
-            print("Authentication failed: user not found")
+            #print("Authentication failed: user not found")
             return None
 
         if not user.verify_password(password):
-            print("Authentication failed: password mismatch")
+            #print("Authentication failed: password mismatch")
             return None
 
-        print("Authentication succeeded")
+        #print("Authentication succeeded")
         return user.to_safe_dict()

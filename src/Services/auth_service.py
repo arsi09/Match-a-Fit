@@ -12,9 +12,6 @@ from Models.SignUpModel import SignUpModel
 
 
 def login_user(email: str, password: str):
-    print("=== LOGIN DEBUG ===")
-    print("Email:", email)
-    print("Password:", password)
 
     if not email or not password:
         return {
@@ -24,7 +21,7 @@ def login_user(email: str, password: str):
 
     user = LogInModel.authenticate(email, password)
 
-    print("User returned:", user)
+    #print("User returned:", user)
 
     if not user:
         return {

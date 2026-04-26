@@ -15,12 +15,8 @@ class LoginController {
     try {
       const credentials = this.normalizeCredentials(email, password);
 
-      console.log('=== LOGIN START ===');
-      console.log('API_URL:', API_URL);
-      console.log('Credentials being sent:', credentials);
 
       if (!credentials.email || !credentials.password) {
-        console.log('Missing email or password');
         return {
           success: false,
           error: 'Email and password are required',
@@ -38,18 +34,17 @@ class LoginController {
       console.log('Response status:', response.status);
 
       const data = await response.json();
-      console.log('Response data:', data);
+      
 
       if (!response.ok || !data.success) {
-        console.log('Login failed on backend');
+        
         return {
           success: false,
           error: data.error || 'Login failed',
         };
       }
 
-      console.log('Login succeeded, saving user...');
-      console.log('User object:', data.user);
+      
 
       await AsyncStorage.setItem(CURRENT_USER_KEY, JSON.stringify(data.user));
 

@@ -1,63 +1,84 @@
 """
 prompts.py
 
-This file contains the "brain" of the AI Stylist.
-Keep all text instructions here to keep the service layer clean.
+Purpose:
+- Contains the prompt instructions for the Match-a-Fit AI Stylist
 """
 
-# Core Identity (System Instruction)
 SYSTEM_IDENTITY = (
     "You are the Match-a-Fit AI Stylist, a high-end fashion consultant. "
-    "Your goal is to build cohesive outfits from a user's digital closet. "
-    "You prioritize color theory, seasonal appropriateness, and occasion-specific etiquette."
+    "Your job is to create outfits ONLY from the user's provided closet items. "
+    "You must never invent clothing items or IDs."
 )
 
-# Occasion Specific Rules
 OCCASION_RULES = {
     "casual": (
-        "Focus on comfort and effortless style. Layering is encouraged. "
-        "Prioritize items like t-shirts, jeans, and sneakers."
+        "Focus on comfort and effortless style. "
+        "Use relaxed pieces like t-shirts, jeans, hoodies, and sneakers."
     ),
     "business casual": (
-        "Balance professional and relaxed. Focus on chinos, polos, "
-        "button-downs, and loafers. Avoid overly distressed items."
+        "Balance professional and relaxed. "
+        "Use button-downs, polos, chinos, loafers, sweaters, or blazers."
     ),
     "formal": (
-        "Focus on elegance and sharp silhouettes. Ensure colors are sophisticated "
-        "(monochromatic or classic pairings). Prioritize dress shirts, slacks, and blazers."
-    )
+        "Focus on elegance and sharp silhouettes. "
+        "Use dress shirts, slacks, blazers, coats, and formal shoes."
+    ),
 }
 
-# Output Format Instructions
 OUTPUT_FORMAT_INSTRUCTIONS = (
-    "Return the data strictly as a JSON array of objects. "
-    "Each object must follow this structure:\n"
-    "{\n"
-    "  \"outfit_name\": \"A catchy name for the look\",\n"
-    "  \"item_ids\": [list of integers],\n"
-    "  \"explanation\": \"Why this works for the occasion and weather\",\n"
-    "  \"style_tip\": \"A quick tip on how to wear it\"\n"
-    "}"
+    "Return ONLY valid JSON.\n"
+    "Return a JSON array using this exact structure:\n"
+    "[\n"
+    "  {\n"
+    "    \"outfit_name\": \"A catchy name\",\n"
+    "    \"item_ids\": [123, 456],\n"
+    "    \"explanation\": \"Why this works\",\n"
+    "    \"style_tip\": \"How to wear it\"\n"
+    "  }\n"
+    "]"
 )
 
 
-def assemble_styling_prompt(occasion, weather=None):
-    """
-    Build the final prompt sent to the AI model.
-    Weather is passed in as plain text and is NOT saved to a file.
-    """
+def build_available_items_text(clothing_items):
+    lines = []
+
+    for item in clothing_items:
+        lines.append(
+            f"- ID {item.get('id')}: type={item.get('clothing_type')}, occasion={item.get('occasion')}"
+        )
+
+    return "\n".join(lines)
+
+
+def assemble_styling_prompt(occasion, weather=None, clothing_items=None):
     rule = OCCASION_RULES.get(
         (occasion or "").lower(),
-        "Create a stylish, balanced look."
+        "Create a stylish outfit."
     )
 
+    clothing_items = clothing_items or []
+    available_items_text = build_available_items_text(clothing_items)
+
     prompt = f"{SYSTEM_IDENTITY}\n\n"
-    prompt += f"USER REQUEST: I need an outfit for a {occasion} occasion.\n"
+
+    prompt += "AVAILABLE CLOSET ITEMS:\n"
+    prompt += available_items_text + "\n\n"
+
+    prompt += f"USER REQUEST: Create an outfit for a {occasion} occasion.\n"
 
     if weather:
-        prompt += f"CURRENT WEATHER: {weather}. Adjust the layers accordingly.\n"
+        prompt += f"TIME / CONTEXT: {weather}\n"
 
-    prompt += f"STYLE GUIDE: {rule}\n\n"
-    prompt += f"FORMATTING RULES:\n{OUTPUT_FORMAT_INSTRUCTIONS}"
+    prompt += f"\nSTYLE GUIDE:\n{rule}\n\n"
+
+    prompt += (
+        "STRICT RULES:\n"
+        "- Only use IDs listed above.\n"
+        "- Do NOT make up IDs.\n"
+        "- Choose a full outfit when possible.\n\n"
+    )
+
+    prompt += f"OUTPUT FORMAT:\n{OUTPUT_FORMAT_INSTRUCTIONS}"
 
     return prompt

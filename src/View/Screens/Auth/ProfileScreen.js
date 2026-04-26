@@ -7,6 +7,7 @@
  * - Delegates all backend logic to ProfileScreenController
  */
 
+import { router } from "expo-router";
 import { useEffect, useState } from "react";
 import {
   Alert,
@@ -20,12 +21,12 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
-import { ProfileScreenController } from "../../../Controllers/ProfileScreenController";
+
+import ProfileController from "../../../Controllers/ProfileController";
 import Button from "../Components/Common/Button";
 import Loading from "../Components/Common/Loading";
 
 const ProfileScreen = () => {
-  //Form State
   const [formData, setFormData] = useState({
     firstName: "",
     lastName: "",
@@ -41,7 +42,6 @@ const ProfileScreen = () => {
     confirmPassword: "",
   });
 
-  //UI State
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -49,23 +49,25 @@ const ProfileScreen = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [loading, setLoading] = useState(true);
 
-  //Loads Profile on mount
   useEffect(() => {
-    ProfileScreenController.loadProfile().then((result) => {
+    ProfileController.loadProfile().then((result) => {
       if (result.success) {
         setFormData(result.data);
       } else {
         Alert.alert("Error", result.message);
       }
+
       setLoading(false);
     });
   }, []);
 
-  //Sends new updated profile changes to controller
   const onSaveProfile = async () => {
     setLoading(true);
-    const result = await ProfileScreenController.updateProfile(formData);
+
+    const result = await ProfileController.updateProfile(formData);
+
     setLoading(false);
+
     if (result.success) {
       Alert.alert("Success", result.message);
       setIsEditing(false);
@@ -74,42 +76,49 @@ const ProfileScreen = () => {
     }
   };
 
-  //Sends password fields to controller
   const onChangePassword = async () => {
     setLoading(true);
-    const result = await ProfileScreenController.changePassword(passwordData);
+
+    const result = await ProfileController.changePassword(passwordData);
+
     setLoading(false);
+
     if (result.success) {
       Alert.alert("Success", result.message);
+
       setPasswordData({
         currentPassword: "",
         newPassword: "",
         confirmPassword: "",
       });
+
       setShowPasswordSection(false);
     } else {
       Alert.alert("Password Update Failed", result.message);
     }
   };
 
-  //Delegates logout to controller
   const onLogout = async () => {
-    await ProfileScreenController.logout();
+    const result = await ProfileController.logout();
+
+    if (result.success) {
+      router.replace("/");
+    } else {
+      Alert.alert("Logout Failed", result.message);
+    }
   };
 
   if (loading) return <Loading message="Loading profile..." />;
 
   return (
     <SafeAreaView style={styles.container}>
-      {/* Header with Back Button */}
       <View style={styles.header}>
-        <TouchableOpacity
-          onPress={() => Alert.alert("Back", "Navigate back to home")}
-          style={styles.backButton}
-        >
+        <TouchableOpacity onPress={() => router.back()} style={styles.backButton}>
           <Text style={styles.backButtonText}>← Back</Text>
         </TouchableOpacity>
+
         <Text style={styles.headerTitle}>My Profile</Text>
+
         <View style={styles.headerSpacer} />
       </View>
 
@@ -122,20 +131,18 @@ const ProfileScreen = () => {
           keyboardShouldPersistTaps="handled"
         >
           <View style={styles.content}>
-            {/* Profile Icon */}
             <View style={styles.profileIconContainer}>
               <View style={styles.profileIcon}>
                 <Text style={styles.profileIconText}>👤</Text>
               </View>
-              <Text style={styles.subtitle}>
-                Manage your Match-a-Fit account
-              </Text>
+
+              <Text style={styles.subtitle}>Manage your Match-a-Fit account</Text>
             </View>
 
-            {/* Profile Information Card */}
             <View style={styles.card}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Profile Information</Text>
+
                 <TouchableOpacity
                   onPress={() => setIsEditing(!isEditing)}
                   style={styles.editToggle}
@@ -197,9 +204,9 @@ const ProfileScreen = () => {
                 keyboardType="numeric"
               />
 
-              {/*Gender selector, disabled when not editing*/}
               <View style={styles.genderContainer}>
                 <Text style={styles.label}>Gender</Text>
+
                 <View style={styles.genderButtons}>
                   {["male", "female", "other"].map((g) => (
                     <TouchableOpacity
@@ -228,7 +235,6 @@ const ProfileScreen = () => {
                 </View>
               </View>
 
-              {/*Save Button */}
               {isEditing && (
                 <Button
                   title="Save Changes"
@@ -238,7 +244,6 @@ const ProfileScreen = () => {
               )}
             </View>
 
-            {/* Change Password Card */}
             <View style={styles.card}>
               <TouchableOpacity
                 onPress={() => setShowPasswordSection(!showPasswordSection)}
@@ -252,17 +257,20 @@ const ProfileScreen = () => {
                 </Text>
               </TouchableOpacity>
 
-              {/*Toggles password Section (new, current, and confirm password)*/}
               {showPasswordSection && (
                 <>
                   <Text style={styles.label}>Current Password</Text>
+
                   <View style={styles.passwordWrapper}>
                     <TextInput
                       style={styles.passwordInput}
                       placeholder="Enter current password"
                       value={passwordData.currentPassword}
                       onChangeText={(v) =>
-                        setPasswordData({ ...passwordData, currentPassword: v })
+                        setPasswordData({
+                          ...passwordData,
+                          currentPassword: v,
+                        })
                       }
                       secureTextEntry={!showCurrentPassword}
                       autoCapitalize="none"
@@ -281,13 +289,17 @@ const ProfileScreen = () => {
                   </View>
 
                   <Text style={styles.label}>New Password</Text>
+
                   <View style={styles.passwordWrapper}>
                     <TextInput
                       style={styles.passwordInput}
                       placeholder="Enter new password"
                       value={passwordData.newPassword}
                       onChangeText={(v) =>
-                        setPasswordData({ ...passwordData, newPassword: v })
+                        setPasswordData({
+                          ...passwordData,
+                          newPassword: v,
+                        })
                       }
                       secureTextEntry={!showNewPassword}
                       autoCapitalize="none"
@@ -304,13 +316,17 @@ const ProfileScreen = () => {
                   </View>
 
                   <Text style={styles.label}>Confirm New Password</Text>
+
                   <View style={styles.passwordWrapper}>
                     <TextInput
                       style={styles.passwordInput}
                       placeholder="Confirm new password"
                       value={passwordData.confirmPassword}
                       onChangeText={(v) =>
-                        setPasswordData({ ...passwordData, confirmPassword: v })
+                        setPasswordData({
+                          ...passwordData,
+                          confirmPassword: v,
+                        })
                       }
                       secureTextEntry={!showConfirmPassword}
                       autoCapitalize="none"
@@ -337,7 +353,6 @@ const ProfileScreen = () => {
               )}
             </View>
 
-            {/*Logout gets handled by the controller */}
             <TouchableOpacity onPress={onLogout} style={styles.logoutButton}>
               <Text style={styles.logoutText}>Log Out</Text>
             </TouchableOpacity>
@@ -348,7 +363,6 @@ const ProfileScreen = () => {
   );
 };
 
-// UI styles
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -380,7 +394,7 @@ const styles = StyleSheet.create({
     color: "#333",
   },
   headerSpacer: {
-    width: 50, // Balance the back button on the left
+    width: 50,
   },
   keyboardView: {
     flex: 1,

@@ -48,7 +48,7 @@ class GeminiClient:
         self.client = genai.Client(api_key=api_key)
 
         # Use a valid Gemini model name
-        self.model_name = "gemini-2.0-flash"
+        self.model_name = "gemini-2.5-flash"
 
     def generate_outfits(self, clothing_items, prompt):
         """

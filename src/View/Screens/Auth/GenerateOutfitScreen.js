@@ -3,6 +3,7 @@ import { useState } from "react";
 import {
   ActivityIndicator,
   Alert,
+  Image,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -29,7 +30,6 @@ const GenerateOutfitScreen = () => {
 
     setStep("generating");
 
-    // You can later replace this with real weather data if you want.
     const weatherText = `Time of day: ${timeOfDay}`;
 
     const result = await GenerateOutfitController.generateOutfit({
@@ -84,9 +84,7 @@ const GenerateOutfitScreen = () => {
                 </View>
 
                 <Text style={styles.cardTitle}>Create Your Perfect Outfit</Text>
-                <Text style={styles.cardSubtitle}>
-                  Tell us about your event
-                </Text>
+                <Text style={styles.cardSubtitle}>Tell us about your event</Text>
               </View>
 
               <View style={styles.formSection}>
@@ -219,11 +217,35 @@ const GenerateOutfitScreen = () => {
                     </Text>
 
                     <Text style={styles.resultLabel}>Items:</Text>
-                    <Text style={styles.resultText}>
-                      {Array.isArray(outfit.item_ids)
-                        ? outfit.item_ids.join(", ")
-                        : "No item IDs returned"}
-                    </Text>
+
+                    <View style={styles.itemsRow}>
+                      {Array.isArray(outfit.items) && outfit.items.length > 0 ? (
+                        outfit.items.map((item) => (
+                          <View key={item.id} style={styles.itemCard}>
+                            {item.image_uri ? (
+                              <Image
+                                source={{ uri: item.image_uri }}
+                                style={styles.itemImage}
+                              />
+                            ) : (
+                              <View style={styles.itemImagePlaceholder}>
+                                <Text style={styles.placeholderText}>
+                                  No Image
+                                </Text>
+                              </View>
+                            )}
+
+                            <Text style={styles.itemType}>
+                              {item.type || "Item"}
+                            </Text>
+                          </View>
+                        ))
+                      ) : (
+                        <Text style={styles.resultText}>
+                          No item images returned
+                        </Text>
+                      )}
+                    </View>
 
                     <Text style={styles.resultLabel}>Why it works:</Text>
                     <Text style={styles.resultText}>
@@ -265,10 +287,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    boxShadow: "0px 2px 4px rgba(0, 0, 0, 0.1)",
     elevation: 3,
   },
 
@@ -307,10 +326,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     borderRadius: 24,
     padding: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
+    boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.15)",
     elevation: 8,
   },
 
@@ -413,16 +429,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     marginTop: 24,
-    shadowColor: "#42A5F5",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
+    boxShadow: "0px 4px 8px rgba(66, 165, 245, 0.3)",
     elevation: 4,
   },
 
   generateButtonDisabled: {
     backgroundColor: "#ccc",
-    shadowOpacity: 0,
+    boxShadow: "none",
+    elevation: 0,
   },
 
   generateButtonText: {
@@ -485,14 +499,61 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: "bold",
     color: "#333",
-    marginTop: 8,
-    marginBottom: 4,
+    marginTop: 12,
+    marginBottom: 6,
   },
 
   resultText: {
     fontSize: 14,
     color: "#555",
     lineHeight: 20,
+  },
+
+  itemsRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+    marginTop: 8,
+  },
+
+  itemCard: {
+    width: 95,
+    backgroundColor: "#fff",
+    borderRadius: 12,
+    padding: 8,
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: "#D6EAF8",
+  },
+
+  itemImage: {
+    width: 75,
+    height: 75,
+    borderRadius: 10,
+    resizeMode: "cover",
+    backgroundColor: "#eee",
+  },
+
+  itemImagePlaceholder: {
+    width: 75,
+    height: 75,
+    borderRadius: 10,
+    backgroundColor: "#eee",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+
+  placeholderText: {
+    fontSize: 10,
+    color: "#777",
+  },
+
+  itemType: {
+    marginTop: 6,
+    fontSize: 12,
+    color: "#333",
+    textAlign: "center",
+    textTransform: "capitalize",
   },
 
   emptyText: {

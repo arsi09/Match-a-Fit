@@ -1,71 +1,67 @@
 """
 outfit_ai_service.py
-
-Purpose:
-- Pull a user's clothing items from the database
-- Prepare image bytes + metadata for Gemini
-- Send the prepared items to Gemini
-- Return outfit recommendations
 """
 
 import json
 
-from Models.PhotoUploadModel import PhotoUploadModel
+from Models.GenerateOutfitModel import GenerateOutfitModel
+from Models.GenerateOutfitSaveModel import GenerateOutfitSaveModel
 from Connection.ai_connection import GeminiClient
 from Services.prompts import assemble_styling_prompt
 
 
 def get_user_clothing_items_for_ai(user_id: int, occasion: str = None):
-    """
-    Get clothing items and prepare them for Gemini.
-    Filters by occasion before sending items to the AI.
-    """
     if not user_id:
         return {"success": False, "error": "User ID is required"}
 
-    items = PhotoUploadModel.get_all_by_user(user_id)
-
-    if not items:
-        return {"success": False, "error": "No clothing items found."}
-
-    prepared_items = []
-
-    for item in items:
-        full_item = PhotoUploadModel.get_by_id(item["id"])
-
-        if not full_item or not full_item.image:
-            continue
-
-        if occasion:
-            item_occasion = (full_item.occasion or "").strip().lower()
-            requested_occasion = occasion.strip().lower()
-
-            # Allow exact match, versatile, or all
-            if item_occasion not in [requested_occasion, "versatile", "all"]:
-                continue
-
-        prepared_items.append({
-            "id": full_item.id,
-            "image_bytes": full_item.image,   # already decoded in PhotoUploadModel.get_by_id()
-            "image_mime": full_item.image_mime,
-            "clothing_type": full_item.clothing_type,
-            "occasion": full_item.occasion
-        })
+    prepared_items = GenerateOutfitModel.get_items_for_ai(user_id, occasion)
 
     if not prepared_items:
         return {
             "success": False,
-            "error": "No matching clothing items found for this occasion."
+            "error": "No matching clothing items found"
         }
 
     return {"success": True, "items": prepared_items}
 
 
+def normalize_ai_outfits(raw_outfits):
+    if isinstance(raw_outfits, dict):
+        raw_outfits = [raw_outfits]
+
+    if not isinstance(raw_outfits, list):
+        return []
+
+    cleaned = []
+
+    for outfit in raw_outfits:
+        if isinstance(outfit, dict):
+            cleaned.append(outfit)
+        elif isinstance(outfit, list):
+            for o in outfit:
+                if isinstance(o, dict):
+                    cleaned.append(o)
+
+    return cleaned
+
+
+def filter_valid_item_ids(item_ids, prepared_items):
+    valid_ids = {int(item["id"]) for item in prepared_items}
+
+    clean_ids = []
+
+    for i in item_ids:
+        try:
+            i = int(i)
+            if i in valid_ids:
+                clean_ids.append(i)
+        except:
+            continue
+
+    return clean_ids
+
+
 def generate_outfit_recommendations(user_id: int, occasion: str, weather: str = None):
-    """
-    Main service function.
-    Builds the prompt, sends data to Gemini, and parses the AI response.
-    """
     clothing_response = get_user_clothing_items_for_ai(user_id, occasion)
 
     if not clothing_response["success"]:
@@ -74,16 +70,67 @@ def generate_outfit_recommendations(user_id: int, occasion: str, weather: str = 
     prepared_items = clothing_response["items"]
 
     try:
-        text_prompt = assemble_styling_prompt(occasion, weather)
+        text_prompt = assemble_styling_prompt(
+            occasion=occasion,
+            weather=weather,
+            clothing_items=prepared_items
+        )
+
+        # print("PROMPT SENT TO GEMINI:")
+        # print(text_prompt)
 
         gemini = GeminiClient()
         ai_response = gemini.generate_outfits(prepared_items, text_prompt)
 
-        if ai_response.get("success"):
-            try:
-                ai_response["outfits"] = json.loads(ai_response["response_text"])
-            except Exception:
-                ai_response["outfits"] = []
+        # print("AI RESPONSE:")
+        # print(ai_response.get("response_text"))
+
+        if not ai_response.get("success"):
+            return ai_response
+
+        try:
+            raw_outfits = json.loads(ai_response.get("response_text", "[]"))
+        except:
+            raw_outfits = []
+
+        outfits = normalize_ai_outfits(raw_outfits)
+
+        saved_outfits = []
+        final_outfits = []
+
+        for outfit in outfits:
+            if not isinstance(outfit, dict):
+                continue
+
+            item_ids = outfit.get("item_ids", [])
+
+            if not isinstance(item_ids, list):
+                continue
+
+            item_ids = filter_valid_item_ids(item_ids, prepared_items)
+
+            if not item_ids:
+                continue
+
+            outfit["item_ids"] = item_ids
+
+            outfit["items"] = GenerateOutfitModel.get_items_for_display(item_ids)
+
+            saved = GenerateOutfitSaveModel.save_generated_outfit(
+                user_id=user_id,
+                item_ids=item_ids,
+                occasion=occasion,
+                style_tip=outfit.get("style_tip")
+            )
+
+            if saved:
+                outfit["saved_outfit_id"] = saved.get("id")
+                saved_outfits.append(saved)
+
+            final_outfits.append(outfit)
+
+        ai_response["outfits"] = final_outfits
+        ai_response["saved_outfits"] = saved_outfits
 
         return ai_response
 

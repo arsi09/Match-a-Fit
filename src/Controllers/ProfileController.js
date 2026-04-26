@@ -1,179 +1,243 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import AsyncStorage from "@react-native-async-storage/async-storage";
 
-// Backend URL from Expo environment.
 const API_URL = process.env.EXPO_PUBLIC_API_URL;
 
-// Shared storage keys used across controllers.
-const CURRENT_USER_KEY = 'matchafit_currentUser';
-const USER_DATA_KEY = 'userData';
-const OUTFIT_LIBRARY_KEY = 'matchafit_outfitLibrary';
-const CLOSET_ITEMS_KEY = 'matchafit_closetItems';
+const CURRENT_USER_KEY = "matchafit_currentUser";
+const USER_DATA_KEY = "userData";
+const OUTFIT_LIBRARY_KEY = "matchafit_outfitLibrary";
+const CLOSET_ITEMS_KEY = "matchafit_closetItems";
 
 class ProfileController {
-	// Reads user object from local storage using the same key order as HomeController.
-	static async getCurrentUser() {
-		try {
-			const currentUserRaw = await AsyncStorage.getItem(CURRENT_USER_KEY);
-			if (currentUserRaw) {
-				return JSON.parse(currentUserRaw);
-			}
+  static async getCurrentUser() {
+    try {
+      const currentUserRaw = await AsyncStorage.getItem(CURRENT_USER_KEY);
 
-			const userDataRaw = await AsyncStorage.getItem(USER_DATA_KEY);
-			if (userDataRaw) {
-				return JSON.parse(userDataRaw);
-			}
+      if (currentUserRaw) {
+        return JSON.parse(currentUserRaw);
+      }
 
-			return null;
-		} catch (error) {
-			return null;
-		}
-	}
+      const userDataRaw = await AsyncStorage.getItem(USER_DATA_KEY);
 
-	// Builds a stable display name from whatever fields exist on the user object.
-	static getDisplayName(user) {
-		if (!user) {
-			return 'User';
-		}
+      if (userDataRaw) {
+        return JSON.parse(userDataRaw);
+      }
 
-		if (user.username) {
-			return user.username;
-		}
+      return null;
+    } catch (error) {
+      return null;
+    }
+  }
 
-		if (user.firstName && user.lastName) {
-			return `${user.firstName} ${user.lastName}`.trim();
-		}
+  static getDisplayName(user) {
+    if (!user) return "User";
 
-		if (user.firstName) {
-			return user.firstName;
-		}
+    if (user.username) return user.username;
 
-		if (user.email) {
-			return String(user.email).split('@')[0] || 'User';
-		}
+    if (user.firstName && user.lastName) {
+      return `${user.firstName} ${user.lastName}`.trim();
+    }
 
-		return 'User';
-	}
+    if (user.firstName) return user.firstName;
 
-	// Returns profile payload ready for UI rendering and optional enrichments.
-	static async loadProfile() {
-		const user = await this.getCurrentUser();
-		if (!user) {
-			return {
-				success: false,
-				error: 'No user found. Please log in again.',
-			};
-		}
+    if (user.email) {
+      return String(user.email).split("@")[0] || "User";
+    }
 
-		const profile = {
-			...user,
-			displayName: this.getDisplayName(user),
-		};
+    return "User";
+  }
 
-		return {
-			success: true,
-			profile,
-		};
-	}
+  static async loadProfile() {
+    const user = await this.getCurrentUser();
 
-	// Updates local profile first for instant UI feedback, then attempts backend sync.
-	static async updateProfile(updates = {}) {
-		try {
-			const user = await this.getCurrentUser();
+    if (!user) {
+      return {
+        success: false,
+        message: "No user found. Please log in again.",
+      };
+    }
 
-			if (!user) {
-				return {
-					success: false,
-					error: 'No user found. Please log in again.',
-				};
-			}
+    return {
+      success: true,
+      data: {
+        firstName: user.firstName || user.first_name || "",
+        lastName: user.lastName || user.last_name || "",
+        phnNumber: user.phnNumber || user.phn_number || "",
+        email: user.email || "",
+        age: user.age ? String(user.age) : "",
+        gender: user.gender || "",
+        id: user.id,
+        displayName: this.getDisplayName(user),
+      },
+    };
+  }
 
-			const merged = {
-				...user,
-				...updates,
-			};
+  static async updateProfile(updates = {}) {
+    try {
+      const user = await this.getCurrentUser();
 
-			await AsyncStorage.setItem(CURRENT_USER_KEY, JSON.stringify(merged));
+      if (!user) {
+        return {
+          success: false,
+          message: "No user found. Please log in again.",
+        };
+      }
 
-			// Keep fallback key in sync when it exists in this project.
-			const userDataRaw = await AsyncStorage.getItem(USER_DATA_KEY);
-			if (userDataRaw) {
-				await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(merged));
-			}
+      const merged = {
+        ...user,
+        ...updates,
+      };
 
-			if (API_URL && merged.id) {
-				try {
-					await fetch(`${API_URL}/profile/${merged.id}`, {
-						method: 'PUT',
-						headers: {
-							'Content-Type': 'application/json',
-						},
-						body: JSON.stringify(merged),
-					});
-				} catch (error) {
-					// Local update already succeeded; keep UI usable if backend is unavailable.
-				}
-			}
+      await AsyncStorage.setItem(CURRENT_USER_KEY, JSON.stringify(merged));
 
-			return {
-				success: true,
-				profile: {
-					...merged,
-					displayName: this.getDisplayName(merged),
-				},
-			};
-		} catch (error) {
-			return {
-				success: false,
-				error: 'Failed to update profile.',
-			};
-		}
-	}
+      const userDataRaw = await AsyncStorage.getItem(USER_DATA_KEY);
 
-	// Provides simple profile metrics commonly shown on profile dashboards.
-	static async loadProfileStats() {
-		try {
-			const closetRaw = await AsyncStorage.getItem(CLOSET_ITEMS_KEY);
-			const outfitsRaw = await AsyncStorage.getItem(OUTFIT_LIBRARY_KEY);
+      if (userDataRaw) {
+        await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(merged));
+      }
 
-			const closetItems = closetRaw ? JSON.parse(closetRaw) : [];
-			const outfits = outfitsRaw ? JSON.parse(outfitsRaw) : [];
+      if (API_URL && merged.id) {
+        try {
+          await fetch(`${API_URL}/profile/${merged.id}`, {
+            method: "PUT",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              firstName: merged.firstName,
+              lastName: merged.lastName,
+              phnNumber: merged.phnNumber,
+              email: merged.email,
+              age: merged.age,
+              gender: merged.gender,
+            }),
+          });
+        } catch (error) {
+          // Backend sync failed, but local update already worked.
+        }
+      }
 
-			return {
-				success: true,
-				stats: {
-					closetCount: Array.isArray(closetItems) ? closetItems.length : 0,
-					outfitsCount: Array.isArray(outfits) ? outfits.length : 0,
-				},
-			};
-		} catch (error) {
-			return {
-				success: true,
-				stats: {
-					closetCount: 0,
-					outfitsCount: 0,
-				},
-			};
-		}
-	}
+      return {
+        success: true,
+        message: "Profile updated successfully.",
+        data: merged,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to update profile.",
+      };
+    }
+  }
 
-	// Clears auth/session-related keys from local storage.
-	static async logout() {
-		try {
-			await AsyncStorage.multiRemove([
-				'authToken',
-				'userId',
-				CURRENT_USER_KEY,
-				USER_DATA_KEY,
-			]);
+  static async changePassword(passwordData = {}) {
+    try {
+      const { currentPassword, newPassword, confirmPassword } = passwordData;
 
-			return { success: true };
-		} catch (error) {
-			return {
-				success: false,
-				error: 'Failed to logout. Please try again.',
-			};
-		}
-	}
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        return {
+          success: false,
+          message: "Please fill out all password fields.",
+        };
+      }
+
+      if (newPassword !== confirmPassword) {
+        return {
+          success: false,
+          message: "New password and confirm password do not match.",
+        };
+      }
+
+      if (newPassword.length < 6) {
+        return {
+          success: false,
+          message: "New password must be at least 6 characters.",
+        };
+      }
+
+      const user = await this.getCurrentUser();
+
+      if (!user || !user.id) {
+        return {
+          success: false,
+          message: "No user found. Please log in again.",
+        };
+      }
+
+      if (API_URL) {
+        const response = await fetch(`${API_URL}/profile/${user.id}/password`, {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            currentPassword,
+            newPassword,
+          }),
+        });
+
+        if (!response.ok) {
+          return {
+            success: false,
+            message: "Password update failed.",
+          };
+        }
+      }
+
+      return {
+        success: true,
+        message: "Password updated successfully.",
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to update password.",
+      };
+    }
+  }
+
+  static async loadProfileStats() {
+    try {
+      const closetRaw = await AsyncStorage.getItem(CLOSET_ITEMS_KEY);
+      const outfitsRaw = await AsyncStorage.getItem(OUTFIT_LIBRARY_KEY);
+
+      const closetItems = closetRaw ? JSON.parse(closetRaw) : [];
+      const outfits = outfitsRaw ? JSON.parse(outfitsRaw) : [];
+
+      return {
+        success: true,
+        stats: {
+          closetCount: Array.isArray(closetItems) ? closetItems.length : 0,
+          outfitsCount: Array.isArray(outfits) ? outfits.length : 0,
+        },
+      };
+    } catch (error) {
+      return {
+        success: true,
+        stats: {
+          closetCount: 0,
+          outfitsCount: 0,
+        },
+      };
+    }
+  }
+
+  static async logout() {
+    try {
+      await AsyncStorage.multiRemove([
+        "authToken",
+        "userId",
+        CURRENT_USER_KEY,
+        USER_DATA_KEY,
+      ]);
+
+      return { success: true };
+    } catch (error) {
+      return {
+        success: false,
+        message: "Failed to logout. Please try again.",
+      };
+    }
+  }
 }
 
 export default ProfileController;

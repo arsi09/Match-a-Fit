@@ -9,18 +9,26 @@ Purpose:
 from Models.ViewClosetModel import ViewClosetModel
 
 
-def get_user_clothing_items(user_id: int):
+def get_user_clothing_items(user_id: int, page: int = 1, limit: int = 10):
     if not user_id:
         return {
             "success": False,
-            "error": "User ID is required"
+            "error": "User ID is required",
+            "items": []
         }
 
-    items = ViewClosetModel.get_items_by_user_id(user_id)
+    page = max(int(page), 1)
+    limit = max(int(limit), 1)
+    limit = min(limit, 10)
+
+    items = ViewClosetModel.get_items_by_user_id(user_id, page, limit)
 
     return {
         "success": True,
-        "items": items
+        "items": items,
+        "page": page,
+        "limit": limit,
+        "hasMore": len(items) == limit
     }
 
 

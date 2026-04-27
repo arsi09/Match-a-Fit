@@ -23,7 +23,7 @@ import {
 import OutfitLibraryController from "../../../Controllers/OutfitLibraryController";
 
 // Occasion filters shown at the top of the screen
-const OCCASIONS = ["All", "Casual", "Formal Casual", "Business Casual"];
+const OCCASIONS = ["All", "Casual", "Formal", "Business Casual"];
 
 // Small reusable button for filtering by occasion
 const FilterChip = ({ label, active, onPress }) => (

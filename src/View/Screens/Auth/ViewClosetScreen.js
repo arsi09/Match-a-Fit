@@ -1,7 +1,8 @@
 /**
  * ViewClosetScreen.js
  * Purpose:
- * - Displays all saved clothing items for the current user
+ * - Displays saved clothing items for the current user
+ * - Uses pagination to load 10 items at a time
  * - Filters by category/type
  * - Allows deleting items
  * - Uses ViewClosetController for backend logic
@@ -21,7 +22,6 @@ import {
 } from "react-native";
 import ViewClosetController from "../../../Controllers/ViewClosetController";
 
-// Put all category values in one place so they are easy to update
 const CATEGORIES = [
   "All",
   "Shirt",
@@ -31,6 +31,8 @@ const CATEGORIES = [
   "Jacket/Hoodie",
   "Shoes",
 ];
+
+const LIMIT = 10;
 
 const FilterChip = ({ label, active, onPress }) => (
   <TouchableOpacity
@@ -43,49 +45,55 @@ const FilterChip = ({ label, active, onPress }) => (
   </TouchableOpacity>
 );
 
-const ClosetCard = ({ item, onDelete, isDeleting }) => (
-  <View style={[styles.card, isDeleting && styles.cardFading]}>
-    <View style={styles.cardContent}>
-      {ViewClosetController.getPhotoUri(item) ? (
-        <Image
-          source={{ uri: ViewClosetController.getPhotoUri(item) }}
-          style={styles.photo}
-          resizeMode="cover"
-        />
-      ) : (
-        <View style={styles.photoPlaceholder}>
-          <Text style={styles.photoPlaceholderText}>No Image</Text>
-        </View>
-      )}
+const ClosetCard = ({ item, onDelete, isDeleting }) => {
+  const photoUri = ViewClosetController.getPhotoUri(item);
 
-      <View style={styles.infoSection}>
-        <Text style={styles.itemType}>{item.type || "Unknown Type"}</Text>
-        <Text style={styles.itemOccasion}>
-          Occasion: {item.occasion || "Casual"}
-        </Text>
-        <Text style={styles.itemDate}>
-          {item.uploaded_at
-            ? new Date(item.uploaded_at).toLocaleDateString()
-            : "No date"}
-        </Text>
+  return (
+    <View style={[styles.card, isDeleting && styles.cardFading]}>
+      <View style={styles.cardContent}>
+        {photoUri ? (
+          <Image
+            source={{ uri: photoUri }}
+            style={styles.photo}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={styles.photoPlaceholder}>
+            <Text style={styles.photoPlaceholderText}>No Image</Text>
+          </View>
+        )}
+
+        <View style={styles.infoSection}>
+          <Text style={styles.itemType}>{item.type || "Unknown Type"}</Text>
+
+          <Text style={styles.itemOccasion}>
+            Occasion: {item.occasion || "Casual"}
+          </Text>
+
+          <Text style={styles.itemDate}>
+            {item.uploaded_at
+              ? new Date(item.uploaded_at).toLocaleDateString()
+              : "No date"}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.cardFooter}>
+        <TouchableOpacity
+          style={[styles.deleteBtn, isDeleting && styles.deleteBtnDisabled]}
+          onPress={onDelete}
+          disabled={isDeleting}
+        >
+          {isDeleting ? (
+            <ActivityIndicator size="small" color="#000" />
+          ) : (
+            <Text style={styles.deleteBtnText}>Delete 🗑</Text>
+          )}
+        </TouchableOpacity>
       </View>
     </View>
-
-    <View style={styles.cardFooter}>
-      <TouchableOpacity
-        style={[styles.deleteBtn, isDeleting && styles.deleteBtnDisabled]}
-        onPress={onDelete}
-        disabled={isDeleting}
-      >
-        {isDeleting ? (
-          <ActivityIndicator size="small" color="#000" />
-        ) : (
-          <Text style={styles.deleteBtnText}>Delete 🗑</Text>
-        )}
-      </TouchableOpacity>
-    </View>
-  </View>
-);
+  );
+};
 
 const ViewClosetScreen = () => {
   const router = useRouter();
@@ -96,20 +104,28 @@ const ViewClosetScreen = () => {
   const [loading, setLoading] = useState(true);
   const [deletingId, setDeletingId] = useState(null);
 
-  useEffect(() => {
-    const fetchItems = async () => {
-      try {
-        const data = await ViewClosetController.loadItems();
-        setItems(Array.isArray(data) ? data : []);
-      } catch (err) {
-        Alert.alert("Error", err.message || "Failed to load closet items");
-      } finally {
-        setLoading(false);
-      }
-    };
+  const [page, setPage] = useState(1);
+  const [hasMore, setHasMore] = useState(false);
 
+  const fetchItems = async () => {
+    try {
+      setLoading(true);
+
+      const data = await ViewClosetController.loadItems(page, LIMIT);
+
+
+      setItems(Array.isArray(data.items) ? data.items : []);
+      setHasMore(Boolean(data.hasMore));
+    } catch (err) {
+      Alert.alert("Error", err.message || "Failed to load closet items");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchItems();
-  }, []);
+  }, [page]);
 
   useEffect(() => {
     setFilteredItems(
@@ -131,8 +147,9 @@ const ViewClosetScreen = () => {
               setDeletingId(id);
               await ViewClosetController.deleteItem(id);
 
-              const updatedItems = items.filter((item) => item.id !== id);
-              setItems(updatedItems);
+              setItems((prevItems) =>
+                prevItems.filter((item) => item.id !== id)
+              );
             } catch (err) {
               Alert.alert("Error", err.message || "Failed to delete item");
             } finally {
@@ -142,6 +159,16 @@ const ViewClosetScreen = () => {
         },
       ]
     );
+  };
+
+  const goPrevious = () => {
+    setPage((prev) => Math.max(prev - 1, 1));
+  };
+
+  const goNext = () => {
+    if (hasMore) {
+      setPage((prev) => prev + 1);
+    }
   };
 
   return (
@@ -177,11 +204,11 @@ const ViewClosetScreen = () => {
           {filteredItems.length === 0 ? (
             <View style={styles.emptyContainer}>
               <Text style={styles.emptyIcon}>👕</Text>
-              <Text style={styles.emptyTitle}>No clothing items yet!</Text>
+              <Text style={styles.emptyTitle}>No clothing items here!</Text>
               <Text style={styles.emptySubtitle}>
                 {activeCategory === "All"
-                  ? "Upload clothing items to build your closet!"
-                  : `No items saved in ${activeCategory} yet!`}
+                  ? "This page does not have clothing items yet."
+                  : `No items saved in ${activeCategory} on this page.`}
               </Text>
             </View>
           ) : (
@@ -194,6 +221,26 @@ const ViewClosetScreen = () => {
               />
             ))
           )}
+
+          <View style={styles.paginationContainer}>
+            <TouchableOpacity
+              style={[styles.pageButton, page <= 1 && styles.disabledButton]}
+              disabled={page <= 1}
+              onPress={goPrevious}
+            >
+              <Text style={styles.pageButtonText}>Previous</Text>
+            </TouchableOpacity>
+
+            <Text style={styles.pageText}>Page {page}</Text>
+
+            <TouchableOpacity
+              style={[styles.pageButton, !hasMore && styles.disabledButton]}
+              disabled={!hasMore}
+              onPress={goNext}
+            >
+              <Text style={styles.pageButtonText}>Next</Text>
+            </TouchableOpacity>
+          </View>
         </ScrollView>
       )}
     </View>
@@ -410,6 +457,37 @@ const styles = StyleSheet.create({
   deleteBtnText: {
     fontSize: 14,
     color: "#000000",
+  },
+
+  paginationContainer: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 20,
+    marginBottom: 30,
+    gap: 12,
+  },
+
+  pageButton: {
+    backgroundColor: "#111827",
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 10,
+  },
+
+  disabledButton: {
+    backgroundColor: "#9CA3AF",
+  },
+
+  pageButtonText: {
+    color: "#FFFFFF",
+    fontWeight: "700",
+  },
+
+  pageText: {
+    fontSize: 16,
+    fontWeight: "700",
+    color: "#111827",
   },
 });
 

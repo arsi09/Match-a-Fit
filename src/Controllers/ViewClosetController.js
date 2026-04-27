@@ -14,9 +14,6 @@ const API_URL = process.env.EXPO_PUBLIC_API_URL;
 const CURRENT_USER_KEY = 'matchafit_currentUser';
 
 class ViewClosetController {
-  /**
-   * Gets the current logged-in user from AsyncStorage
-   */
   static async getCurrentUser() {
     try {
       const raw = await AsyncStorage.getItem(CURRENT_USER_KEY);
@@ -26,10 +23,7 @@ class ViewClosetController {
     }
   }
 
-  /**
-   * Loads clothing items for the current user from the backend
-   */
-  static async loadItems() {
+  static async loadItems(page = 1, limit = 10) {
     const user = await this.getCurrentUser();
     const userId = user?.id;
 
@@ -41,19 +35,24 @@ class ViewClosetController {
       throw new Error('No logged in user found.');
     }
 
-    const response = await fetch(`${API_URL}/view-closet/user/${userId}`);
+    const response = await fetch(
+      `${API_URL}/view-closet/user/${userId}?page=${page}&limit=${limit}`
+    );
+
     const data = await response.json();
 
     if (!response.ok || !data.success) {
       throw new Error(data.error || 'Failed to load clothing items');
     }
 
-    return Array.isArray(data.items) ? data.items : [];
+    return {
+      items: Array.isArray(data.items) ? data.items : [],
+      page: data.page || page,
+      limit: data.limit || limit,
+      hasMore: Boolean(data.hasMore),
+    };
   }
 
-  /**
-   * Deletes one clothing item for the current user
-   */
   static async deleteItem(itemId) {
     const user = await this.getCurrentUser();
     const userId = user?.id;
@@ -90,9 +89,6 @@ class ViewClosetController {
     return data;
   }
 
-  /**
-   * Filters clothing items by type on the frontend
-   */
   static filterByType(items = [], selectedType = 'All') {
     if (!Array.isArray(items)) {
       return [];
@@ -109,9 +105,6 @@ class ViewClosetController {
     });
   }
 
-  /**
-   * Converts image data into a URI React Native can display
-   */
   static getPhotoUri(item) {
     if (!item || typeof item !== 'object') {
       return null;

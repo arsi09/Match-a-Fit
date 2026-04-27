@@ -5,7 +5,7 @@ Purpose:
 - API routes for closet items
 """
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 from pydantic import BaseModel
 
 from Services.view_closet_service import (
@@ -25,8 +25,12 @@ class DeleteClothingItemRequest(BaseModel):
 
 
 @router.get("/user/{user_id}")
-def load_clothing_items(user_id: int):
-    return get_user_clothing_items(user_id)
+def load_clothing_items(
+    user_id: int,
+    page: int = Query(1),
+    limit: int = Query(10)
+):
+    return get_user_clothing_items(user_id, page, limit)
 
 
 @router.delete("/delete")

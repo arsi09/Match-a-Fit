@@ -28,132 +28,68 @@ class ProfileController {
     }
   }
 
-  static getDisplayName(user) {
-    if (!user) return "User";
+  static async saveUserLocally(user) {
+    await AsyncStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
 
-    if (user.username) return user.username;
+    const userDataRaw = await AsyncStorage.getItem(USER_DATA_KEY);
 
-    if (user.firstName && user.lastName) {
-      return `${user.firstName} ${user.lastName}`.trim();
+    if (userDataRaw) {
+      await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(user));
     }
-
-    if (user.firstName) return user.firstName;
-
-    if (user.email) {
-      return String(user.email).split("@")[0] || "User";
-    }
-
-    return "User";
   }
 
   static async loadProfile() {
     const user = await this.getCurrentUser();
 
-    if (!user) {
+    if (!user || !user.id) {
       return {
         success: false,
         message: "No user found. Please log in again.",
       };
     }
 
+    if (API_URL) {
+      try {
+        const response = await fetch(`${API_URL}/profile/${user.id}`);
+        const result = await response.json();
+
+        if (response.ok && result.profile) {
+          await this.saveUserLocally(result.profile);
+
+          return {
+            success: true,
+            data: result.profile,
+          };
+        }
+
+        return {
+          success: false,
+          message: result.message || "Failed to load profile.",
+        };
+      } catch (error) {
+        return {
+          success: false,
+          message: `Failed to load profile. API error: ${String(error)}`,
+        };
+      }
+    }
+
     return {
       success: true,
       data: {
+        id: user.id,
         firstName: user.firstName || user.first_name || "",
         lastName: user.lastName || user.last_name || "",
         phnNumber: user.phnNumber || user.phn_number || "",
         email: user.email || "",
         age: user.age ? String(user.age) : "",
         gender: user.gender || "",
-        id: user.id,
-        displayName: this.getDisplayName(user),
       },
     };
   }
 
   static async updateProfile(updates = {}) {
     try {
-      const user = await this.getCurrentUser();
-
-      if (!user) {
-        return {
-          success: false,
-          message: "No user found. Please log in again.",
-        };
-      }
-
-      const merged = {
-        ...user,
-        ...updates,
-      };
-
-      await AsyncStorage.setItem(CURRENT_USER_KEY, JSON.stringify(merged));
-
-      const userDataRaw = await AsyncStorage.getItem(USER_DATA_KEY);
-
-      if (userDataRaw) {
-        await AsyncStorage.setItem(USER_DATA_KEY, JSON.stringify(merged));
-      }
-
-      if (API_URL && merged.id) {
-        try {
-          await fetch(`${API_URL}/profile/${merged.id}`, {
-            method: "PUT",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              firstName: merged.firstName,
-              lastName: merged.lastName,
-              phnNumber: merged.phnNumber,
-              email: merged.email,
-              age: merged.age,
-              gender: merged.gender,
-            }),
-          });
-        } catch (error) {
-          // Backend sync failed, but local update already worked.
-        }
-      }
-
-      return {
-        success: true,
-        message: "Profile updated successfully.",
-        data: merged,
-      };
-    } catch (error) {
-      return {
-        success: false,
-        message: "Failed to update profile.",
-      };
-    }
-  }
-
-  static async changePassword(passwordData = {}) {
-    try {
-      const { currentPassword, newPassword, confirmPassword } = passwordData;
-
-      if (!currentPassword || !newPassword || !confirmPassword) {
-        return {
-          success: false,
-          message: "Please fill out all password fields.",
-        };
-      }
-
-      if (newPassword !== confirmPassword) {
-        return {
-          success: false,
-          message: "New password and confirm password do not match.",
-        };
-      }
-
-      if (newPassword.length < 6) {
-        return {
-          success: false,
-          message: "New password must be at least 6 characters.",
-        };
-      }
-
       const user = await this.getCurrentUser();
 
       if (!user || !user.id) {
@@ -163,34 +99,54 @@ class ProfileController {
         };
       }
 
-      if (API_URL) {
-        const response = await fetch(`${API_URL}/profile/${user.id}/password`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            currentPassword,
-            newPassword,
-          }),
-        });
-
-        if (!response.ok) {
-          return {
-            success: false,
-            message: "Password update failed.",
-          };
-        }
+      if (!API_URL) {
+        return {
+          success: false,
+          message: "API URL is missing. Check EXPO_PUBLIC_API_URL.",
+        };
       }
+
+      const response = await fetch(`${API_URL}/profile/${user.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          firstName: updates.firstName,
+          lastName: updates.lastName,
+          phnNumber: updates.phnNumber,
+          email: updates.email,
+          age: updates.age,
+          gender: updates.gender,
+        }),
+      });
+
+      const result = await response.json();
+
+
+      if (!response.ok) {
+        return {
+          success: false,
+          message: result.message || "Server error updating profile.",
+        };
+      }
+
+      const updatedProfile = result.profile || {
+        ...user,
+        ...updates,
+      };
+
+      await this.saveUserLocally(updatedProfile);
 
       return {
         success: true,
-        message: "Password updated successfully.",
+        message: result.message || "Profile updated successfully.",
+        data: updatedProfile,
       };
     } catch (error) {
       return {
         success: false,
-        message: "Failed to update password.",
+        message: `Failed to update profile. API error: ${String(error)}`,
       };
     }
   }
@@ -238,6 +194,50 @@ class ProfileController {
       };
     }
   }
+
+  static async changePassword(passwordData = {}) {
+    try {
+      const { currentPassword, newPassword, confirmPassword } = passwordData;
+
+      if (!currentPassword || !newPassword || !confirmPassword) {
+        return {
+          success: false,
+          message: "Please fill out all password fields.",
+        };
+      }
+
+      if (newPassword !== confirmPassword) {
+        return {
+          success: false,
+          message: "Passwords do not match.",
+        };
+      }
+
+      const user = await this.getCurrentUser();
+
+      const response = await fetch(`${API_URL}/profile/${user.id}/password`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          currentPassword,
+          newPassword,
+        }),
+      });
+
+      const result = await response.json();
+
+      return result;
+
+    } catch (error) {
+      return {
+        success: false,
+        message: "Password update failed.",
+      };
+    }
+  }
+
 }
 
 export default ProfileController;

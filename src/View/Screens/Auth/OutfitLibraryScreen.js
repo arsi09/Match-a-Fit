@@ -48,7 +48,7 @@ const OutfitCard = ({ outfit, onDelete, isDeleting }) => (
     </View>
 
     <View style={styles.itemsContainer}>
-      {["Layer", "Shirt", "Pants", "Footwear"].map((slot) =>
+      {["Upper", "Lower", "Layer", "Footwear"].map((slot) =>
         outfit.items?.[slot] ? (
           <View key={slot} style={styles.itemRow}>
             <Text style={styles.itemLabel}>{slot}:</Text>

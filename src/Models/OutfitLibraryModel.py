@@ -39,7 +39,7 @@ class OutfitLibraryModel:
     @staticmethod
     def build_photo_uri(raw_photo: Any, mime_type: Optional[str] = None) -> Optional[str]:
         """
-        Converts image text from the database into a React Native-friendly URI.
+        Converts base64 image text from the database into a React Native image URI.
         """
         if raw_photo is None:
             return None
@@ -49,6 +49,7 @@ class OutfitLibraryModel:
         if not raw_photo:
             return None
 
+        # If it is already a full data URI, return it as-is.
         if raw_photo.startswith("data:image"):
             return raw_photo
 
@@ -57,6 +58,9 @@ class OutfitLibraryModel:
 
     @classmethod
     def get_clothing_item_by_id(cls, item_id: Optional[int]) -> Optional[Dict[str, Any]]:
+        """
+        Gets one clothing item from clothing_items using its ID.
+        """
         if not item_id:
             return None
 
@@ -83,12 +87,14 @@ class OutfitLibraryModel:
         item: Optional[Dict[str, Any]],
         fallback_label: str
     ) -> Optional[Dict[str, Any]]:
+        """
+        Converts a clothing_items row into the format the frontend can display.
+        """
         if not item or not isinstance(item, dict):
             return None
 
         raw_photo = item.get("image")
         mime_type = item.get("image_mime")
-
         item_type = item.get("type")
 
         label = (
@@ -108,27 +114,40 @@ class OutfitLibraryModel:
 
     @classmethod
     def normalize_outfit(cls, record: Dict[str, Any]) -> Dict[str, Any]:
+        """
+        Converts one outfits table row into a frontend-ready outfit object.
+
+        DB mapping:
+        - upper_item_id    -> Upper
+        - lower_item_id    -> Lower
+        - layer_item_id    -> Layer
+        - footwear_item_id -> Footwear
+        """
+
         upper_item = cls.get_clothing_item_by_id(record.get("upper_item_id"))
         lower_item = cls.get_clothing_item_by_id(record.get("lower_item_id"))
+        layer_item = cls.get_clothing_item_by_id(record.get("layer_item_id"))
         footwear_item = cls.get_clothing_item_by_id(record.get("footwear_item_id"))
 
-        # Supports either "layer_item_id" or "layer"
-        layer_item_id = record.get("layer_item_id")
-        if layer_item_id is None:
-            layer_item_id = record.get("layer")
+        items = {}
 
-        layer_item = cls.get_clothing_item_by_id(layer_item_id)
-
-        items = {
-            "Shirt": cls.normalize_clothing_item(upper_item, "Shirt"),
-            "Pants": cls.normalize_clothing_item(lower_item, "Pants"),
-            "Footwear": cls.normalize_clothing_item(footwear_item, "Footwear"),
-        }
-
-        # Only add Layer if it exists
+        normalized_upper = cls.normalize_clothing_item(upper_item, "Upper")
+        normalized_lower = cls.normalize_clothing_item(lower_item, "Lower")
         normalized_layer = cls.normalize_clothing_item(layer_item, "Layer")
+        normalized_footwear = cls.normalize_clothing_item(footwear_item, "Footwear")
+
+        # Only add the category if that item exists in the outfit row.
+        if normalized_upper:
+            items["Upper"] = normalized_upper
+
+        if normalized_lower:
+            items["Lower"] = normalized_lower
+
         if normalized_layer:
             items["Layer"] = normalized_layer
+
+        if normalized_footwear:
+            items["Footwear"] = normalized_footwear
 
         return {
             "id": record.get("id"),
@@ -136,11 +155,15 @@ class OutfitLibraryModel:
             "occasion": record.get("occasion") or "Casual",
             "timeOfDay": "Anytime",
             "createdAt": record.get("created_at"),
+            "styleTip": record.get("style_tip"),
             "items": items,
         }
 
     @classmethod
     def get_outfits_by_user(cls, user_id: int) -> List[Dict[str, Any]]:
+        """
+        Loads all saved outfits for one user.
+        """
         if not user_id:
             return []
 
@@ -159,6 +182,9 @@ class OutfitLibraryModel:
 
     @classmethod
     def delete_outfit(cls, outfit_id: int, user_id: int) -> bool:
+        """
+        Deletes one saved outfit for one user.
+        """
         if not outfit_id or not user_id:
             return False
 
@@ -179,6 +205,9 @@ class OutfitLibraryModel:
         outfits: List[Dict[str, Any]],
         occasion: str = "All"
     ) -> List[Dict[str, Any]]:
+        """
+        Filters saved outfits by occasion.
+        """
         if not isinstance(outfits, list):
             return []
 

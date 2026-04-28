@@ -69,7 +69,9 @@ class GenerateOutfitSaveModel:
                 "t-shirt",
                 "tee",
                 "blouse",
-                "sweater"
+                "sweater", 
+                "dress", 
+                "dresses"
             ]:
                 upper_item_id = item_id
 
@@ -93,7 +95,7 @@ class GenerateOutfitSaveModel:
                 footwear_item_id = item_id
 
             elif any(word in clothing_type for word in [
-                "jacket",
+               "jacket",
                 "hoodie",
                 "coat",
                 "blazer",

@@ -92,14 +92,15 @@ class GenerateOutfitSaveModel:
             ]:
                 footwear_item_id = item_id
 
-            elif clothing_type in [
+            elif any(word in clothing_type for word in [
                 "jacket",
                 "hoodie",
                 "coat",
                 "blazer",
                 "layer",
-                "cardigan"
-            ]:
+                "cardigan",
+                "outerwear"
+            ]):
                 layer_item_id = item_id
 
         data = {

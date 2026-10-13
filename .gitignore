@@ -38,6 +38,10 @@ yarn-error.*
 .env.production.local
 .env*.local
 
+# Python generated files
+__pycache__/
+*.py[cod]
+
 # typescript
 *.tsbuildinfo
 

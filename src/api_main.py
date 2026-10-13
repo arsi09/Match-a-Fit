@@ -3,7 +3,7 @@ api_main.py
 Created by Arsi 03/02/2026
 
 Purpose:
-- FastAPI application entry point using your EXISTING project structure
+- FastAPI application entry point using EXISTING project structure
 - Exposes endpoints for:
     - POST /signup
     - POST /login

@@ -1,16 +1,22 @@
-# Welcome to your Expo app 👋
+# Match-a-Fit
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+Match-a-Fit is a fashion and outfit-planning mobile app built with Expo and React Native, with a FastAPI backend for authentication, closet management, photo uploads, and outfit generation.
+
+This repository is an individual clean copy of the team project. The original team repository is available at [Juan-Marco-Saca/Match-a-Fit-app](https://github.com/Juan-Marco-Saca/Match-a-Fit-app).
 
 ## Get started
 
-1. Install dependencies
+### Frontend
+
+This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+
+1. Install dependencies:
 
    ```bash
    npm install
    ```
 
-2. Start the app
+2. Start the app:
 
    ```bash
    npx expo start
@@ -25,7 +31,23 @@ In the output, you'll find options to open the app in a
 
 You can start developing by editing the files inside the **app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
 
-## Get a fresh project
+### Backend
+
+1. Create a local Python environment and install the dependencies:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+2. Create a local `.env` file with the Supabase and AI service values required by the backend. Never commit this file or API keys.
+
+3. Start the API from the repository root:
+
+   ```bash
+   uvicorn src.api_main:app --reload
+   ```
+
+## Reset the Expo starter project
 
 When you're ready, run:
 
